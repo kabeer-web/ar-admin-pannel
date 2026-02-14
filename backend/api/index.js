@@ -4,10 +4,12 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
 const app = express();
+
+// Vercel handles CORS automatically, but safe to keep this
 app.use(cors());
 app.use(express.json());
 
-// Cloudinary Config
+// Cloudinary Config (Aapki keys already added hain)
 cloudinary.config({
   cloud_name: 'doa5h9wwi',
   api_key: '941973848597755',
@@ -17,7 +19,7 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// API Route
+// API Route: /api/upload-model
 app.post('/api/upload-model', upload.single('model'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "File missing" });
@@ -25,7 +27,10 @@ app.post('/api/upload-model', upload.single('model'), async (req, res) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { resource_type: "raw", folder: "ar_models_store" },
       (error, result) => {
-        if (error) return res.status(500).json({ error: error.message });
+        if (error) {
+          console.error("Cloudinary Error:", error);
+          return res.status(500).json({ error: error.message });
+        }
         res.json({ url: result.secure_url });
       }
     );
@@ -35,5 +40,5 @@ app.post('/api/upload-model', upload.single('model'), async (req, res) => {
   }
 });
 
-// Vercel ke liye zaruri: Server ko export karna
+// IMPORTANT: Vercel ke liye server ko export karna zaruri hai
 module.exports = app;
