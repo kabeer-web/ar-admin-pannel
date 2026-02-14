@@ -1,1 +1,9 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* transition add karne ke liye */
+html {
+  transition: background-color 0.3s ease;
+}

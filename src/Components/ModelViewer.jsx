@@ -11,7 +11,7 @@ const ModelViewer = () => {
             {/* Placeholder Box - Jab tak AI model nahi aata */}
             <mesh>
               <boxGeometry args={[1, 1, 1]} />
-              <meshStandardMaterial color="#3b82f6" />
+              <meshStandardMaterial color="#c4f63b" />
             </mesh>
           </Stage>
         </Suspense>

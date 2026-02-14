@@ -1,21 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './Components/Sidebar';
-import Generator3D from './Components/Generator3D';
-import QrGenerator from './Components/QrGenerator';
 import ArGenerator from './Components/ArGenerator';
-import ARView from './Components/ARView';
+import Generator3D from './Components/Generator3D';
+import QrGenerator from './Components/QrGenerator'; // Import check kar lena sahi hai ya nahi
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState('ar');
+  // Shuruat mein 'generator' ya koi bhi valid tab rakhein
+  const [activeTab, setActiveTab] = useState('generator');
 
   return (
-    // 'dark' class Sidebar se control ho rahi hai, yahan hum smooth background transition de rahe hain
-    <div className="flex min-h-screen bg-slate-50 dark:bg-[#020617] transition-colors duration-500">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    // Pura background dark emerald/black rakha hai takay seamless lage
+    <div className="flex min-h-screen bg-[#020806] transition-colors duration-300">
       
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+      {/* Sidebar Section */}
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+      />
+      
+      {/* Main Content Area */}
+      <main className="flex-1 h-screen overflow-y-auto custom-scrollbar">
         <div className="max-w-[1600px] mx-auto">
+          {/* Conditional Rendering logic yahan theek ki hai */}
           {activeTab === 'generator' && <Generator3D />}
           {activeTab === 'qr' && <QrGenerator />}
           {activeTab === 'ar' && <ArGenerator />}
@@ -29,7 +36,6 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/view" element={<ARView />} />
         <Route path="/*" element={<AppContent />} />
       </Routes>
     </Router>

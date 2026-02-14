@@ -1,14 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class', // Ye sabse important line hai dark mode ke liye
+  darkMode: 'class', // YAHAN CHECK KARO: 'class' hona chahiye, 'media' nahi!
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {
-      // Tum chaho toh custom colors yahan add kar sakte ho
-    },
+    extend: {},
   },
   plugins: [],
 }
