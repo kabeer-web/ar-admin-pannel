@@ -1,28 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './Components/Sidebar';
 import ArGenerator from './Components/ArGenerator';
 import Generator3D from './Components/Generator3D';
-import QrGenerator from './Components/QrGenerator'; // Import check kar lena sahi hai ya nahi
+import QrGenerator from './Components/QrGenerator';
+import ARView from './Components/ARView'; // Isse import zaroor karna
 
-function AppContent() {
-  // Shuruat mein 'generator' ya koi bhi valid tab rakhein
-  const [activeTab, setActiveTab] = useState('generator');
+function Dashboard() {
+  const [activeTab, setActiveTab] = useState('ar'); // Default tab 'ar' rakha hai
 
   return (
-    // Pura background dark emerald/black rakha hai takay seamless lage
-    <div className="flex min-h-screen bg-[#020806] transition-colors duration-300">
-      
-      {/* Sidebar Section */}
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-      />
-      
-      {/* Main Content Area */}
+    <div className="flex min-h-screen bg-[#020806]">
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="flex-1 h-screen overflow-y-auto custom-scrollbar">
         <div className="max-w-[1600px] mx-auto">
-          {/* Conditional Rendering logic yahan theek ki hai */}
           {activeTab === 'generator' && <Generator3D />}
           {activeTab === 'qr' && <QrGenerator />}
           {activeTab === 'ar' && <ArGenerator />}
@@ -36,7 +27,14 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/*" element={<AppContent />} />
+        {/* Dashboard route (Generator, Sidebar etc) */}
+        <Route path="/" element={<Dashboard />} />
+        
+        {/* AR View route (Scan ke baad sirf ye khulega) */}
+        <Route path="/view" element={<ARView />} />
+        
+        {/* Fallback to Dashboard */}
+        <Route path="*" element={<Dashboard />} />
       </Routes>
     </Router>
   );
