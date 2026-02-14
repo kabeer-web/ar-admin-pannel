@@ -1,50 +1,49 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer'); // <--- Naya add karo
-const path = require('path');    // <--- Naya add karo
-const fs = require('fs');        // <--- Folder check karne ke liye
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- 1. Uploads Folder Setup ---
-// Agar 'uploads' folder nahi hai toh bana dega
-const uploadDir = 'uploads';
-if (!fs.existsSync(uploadDir)){
-    fs.mkdirSync(uploadDir);
-}
-
-// Laptop/Phone ko images access karne ki permission dena
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// --- 2. Multer Storage Logic ---
-const storage = multer.diskStorage({
-  destination: 'uploads/',
-  filename: (req, file, cb) => {
-    // File ka naam unique banana: time-filename.glb
-    cb(null, Date.now() + '-' + file.originalname);
-  }
+// Cloudinary Configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET
 });
+
+// Setting up storage for 3D Models (.glb)
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'ar_models_store',
+    resource_type: 'raw', // ZAROORI: .glb files ke liye 'raw' use hota hai
+    public_id: (req, file) => Date.now() + '-' + file.originalname,
+  },
+});
+
 const upload = multer({ storage });
 
-// --- 3. API Endpoint ---
+// Upload Endpoint
 app.post('/api/upload-model', upload.single('model'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-
-  // Ye URL aapke phone mein load hoga
-  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-  console.log("✅ File Saved at:", fileUrl);
-  res.json({ url: fileUrl });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "File upload fail ho gayi!" });
+    }
+    // Cloudinary ka direct HTTPS link return karega
+    res.json({ url: req.file.path });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Aapka purana /api/generate wala code yahan chalta rahega...
-const PORT = 5000;
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`
-    🚀 Backend is accessible on:
-    Local:   http://localhost:${PORT}
-    Network: http://YOUR_IP_HERE:${PORT}
-    `);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
+
+module.exports = app;
