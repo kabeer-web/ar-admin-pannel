@@ -4,15 +4,10 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 
 const app = express();
-
-// 1. UPDATED CORS: Allow your specific Vercel URL
-app.use(cors({
-  origin: ["https://ar-admin-pannel.vercel.app", "http://localhost:3000", "http://localhost:5173"],
-  methods: ["GET", "POST"]
-}));
-
+app.use(cors());
 app.use(express.json());
 
+// Cloudinary Config
 cloudinary.config({
   cloud_name: 'doa5h9wwi',
   api_key: '941973848597755',
@@ -22,6 +17,7 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// API Route
 app.post('/api/upload-model', upload.single('model'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "File missing" });
@@ -39,8 +35,5 @@ app.post('/api/upload-model', upload.single('model'), async (req, res) => {
   }
 });
 
-// 2. UPDATED PORT: Uses environment port for hosting services
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Backend running on port ${PORT}`);
-});
+// Vercel ke liye zaruri: Server ko export karna
+module.exports = app;
