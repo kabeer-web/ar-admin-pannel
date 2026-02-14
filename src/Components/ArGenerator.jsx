@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Upload, Smartphone, Loader2, AlertCircle, Box, CheckCircle2, Palette, Image as ImageIcon, Zap, Info, Share2 } from 'lucide-react';
+import { Upload, Smartphone, Loader2, AlertCircle, Box, CheckCircle2, Palette, Image as ImageIcon, Zap, Info, Share2, MousePointer2 } from 'lucide-react';
 import axios from 'axios';
 import '@google/model-viewer';
 
@@ -12,15 +12,25 @@ const ArGenerator = () => {
   const [error, setError] = useState(null);
 
   // --- BRANDING STATES ---
-  const [qrColor, setQrColor] = useState('#000000');
+  const [qrColor, setQrColor] = useState('#2563eb'); // Premium Blue default
   const [qrBg, setQrBg] = useState('#ffffff');
-  const [logoUrl, setLogoUrl] = useState(''); // Logo link ya base64
+  const [logoUrl, setLogoUrl] = useState(''); 
 
   const API_BASE_URL = "http://localhost:5000"; 
 
   const getARViewLink = () => {
     if (!publicUrl) return '';
     return `${window.location.origin}/view?model=${encodeURIComponent(publicUrl)}`;
+  };
+
+  // --- NEW: MANUAL LOGO UPLOAD HANDLER ---
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setLogoUrl(reader.result);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleFileUpload = async (e) => {
@@ -33,160 +43,205 @@ const ArGenerator = () => {
     setModelUrl(URL.createObjectURL(file));
     setLoading(true);
     setError(null);
-    setUploadStep('Analyzing 3D Mesh...');
+    setUploadStep('Analyzing Geometry...');
 
     const formData = new FormData();
     formData.append('model', file); 
 
     try {
-      setUploadStep('Optimizing for Mobile...');
+      setUploadStep('Cloud Syncing...');
       const res = await axios.post(`${API_BASE_URL}/api/upload-model`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
       if (res.data.url) {
-        setUploadStep('Ready for Branding...');
+        setUploadStep('Finalizing AR Link...');
         setTimeout(() => {
             setPublicUrl(res.data.url);
             setLoading(false);
         }, 1000);
       }
     } catch (err) {
-      setError("Upload failed. Check Server!");
+      setError("Server Timeout. Try again!");
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8 animate-in fade-in duration-700 bg-[#fbfcfd]">
+    <div className="max-w-[1400px] mx-auto p-4 md:p-10 space-y-10 bg-[#f8fafc] min-h-screen font-sans">
       
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-8">
-        <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">Enterprise <span className="text-blue-600">AR</span> Hub</h1>
-          <p className="text-slate-500 font-medium">Professional AR asset deployment with custom brand identity.</p>
+      {/* Dynamic Header */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-10 border-b-2 border-slate-200/60">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+             <div className="bg-blue-600 p-2 rounded-xl text-white"><Zap size={24} fill="currentColor"/></div>
+             <h1 className="text-4xl font-black text-slate-900 tracking-tighter">AR STUDIO <span className="text-blue-600">PRO</span></h1>
+          </div>
+          <p className="text-slate-500 font-medium text-lg">Deploy branded augmented reality experiences instantly.</p>
         </div>
-        <div className="flex gap-3">
-            <div className="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xl">
-               <Zap size={14} className="text-yellow-400 fill-yellow-400"/> PREMIUM VERSION
-            </div>
+        <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+           <div className="px-4 py-2 bg-slate-50 rounded-xl text-xs font-black text-slate-400">STATUS: SYSTEM READY</div>
+           <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
         </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         
-        {/* Left Side: Controls */}
-        <div className="lg:col-span-4 space-y-6">
+        {/* --- Sidebar: Design Controls (4 cols) --- */}
+        <div className="lg:col-span-4 space-y-8">
           
-          {/* 1. Upload Section */}
-          <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm transition-all hover:shadow-md">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                <Upload size={14}/> 01. Asset Upload
-            </h2>
+          {/* Step 1: Model Upload */}
+          <section className="bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100">
+            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <Box size={16}/> 01. 3D Asset
+            </h3>
             <input type="file" id="glb-up" className="hidden" onChange={handleFileUpload} accept=".glb" />
-            <label htmlFor="glb-up" className={`w-full h-40 border-2 border-dashed rounded-[1.5rem] flex flex-col items-center justify-center transition-all cursor-pointer ${loading ? 'border-blue-400 bg-blue-50' : 'border-slate-100 bg-slate-50 hover:border-blue-500 hover:bg-white'}`}>
+            <label htmlFor="glb-up" className={`w-full h-44 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center transition-all cursor-pointer group ${loading ? 'border-blue-400 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:border-blue-500 hover:bg-white'}`}>
                {loading ? (
-                 <div className="flex flex-col items-center gap-3">
-                   <Loader2 className="animate-spin text-blue-600" size={32}/>
-                   <span className="text-sm font-bold text-blue-600">{uploadStep}</span>
+                 <div className="text-center space-y-3">
+                   <Loader2 className="animate-spin text-blue-600 mx-auto" size={40}/>
+                   <p className="text-sm font-bold text-blue-600 uppercase tracking-widest">{uploadStep}</p>
                  </div>
                ) : (
-                 <div className="flex flex-col items-center gap-2">
-                   <Box className="text-slate-300" size={32}/>
-                   <span className="font-bold text-slate-500 text-sm tracking-tight">Select 3D Model (.glb)</span>
+                 <div className="text-center space-y-2">
+                   <div className="p-4 bg-white rounded-2xl shadow-sm group-hover:scale-110 transition-transform inline-block">
+                      <Upload className="text-blue-500" size={28}/>
+                   </div>
+                   <p className="font-bold text-slate-700 block">Click to Upload GLB</p>
+                   <p className="text-slate-400 text-xs italic underline">Max size: 50MB</p>
                  </div>
                )}
             </label>
-          </div>
+          </section>
 
-          {/* 2. Customization Section */}
-          <div className={`bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm transition-all ${!publicUrl && 'opacity-50 pointer-events-none'}`}>
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                <Palette size={14}/> 02. Brand Identity
-            </h2>
+          {/* Step 2: Branding (Unlocked when uploaded) */}
+          <section className={`bg-white p-8 rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 transition-all duration-500 ${!publicUrl ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
+            <h3 className="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-8 flex items-center gap-2">
+                <Palette size={16}/> 02. Design System
+            </h3>
             
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">QR Color</label>
-                    <input type="color" value={qrColor} onChange={(e)=>setQrColor(e.target.value)} className="w-full h-10 rounded-lg cursor-pointer border-none" />
+            <div className="space-y-8">
+              {/* Colors */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">QR Pattern</label>
+                    <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-100">
+                        <input type="color" value={qrColor} onChange={(e)=>setQrColor(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none" />
+                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">{qrColor}</span>
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase">QR Background</label>
-                    <input type="color" value={qrBg} onChange={(e)=>setQrBg(e.target.value)} className="w-full h-10 rounded-lg cursor-pointer border-none" />
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">QR Canvas</label>
+                    <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-2xl border border-slate-100">
+                        <input type="color" value={qrBg} onChange={(e)=>setQrBg(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none" />
+                        <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">{qrBg}</span>
+                    </div>
                 </div>
               </div>
 
-              <div className="space-y-2 text-left">
-                <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                    <ImageIcon size={10}/> Company Logo (URL)
+              {/* Logo Upload (Manual) */}
+              <div className="space-y-4">
+                <label className="text-xs font-bold text-slate-500 uppercase ml-1 flex justify-between">
+                    <span>Center Branding Logo</span>
+                    {logoUrl && <button onClick={()=>setLogoUrl('')} className="text-red-400 hover:underline">Clear</button>}
                 </label>
+                <div className="flex gap-4">
+                    <input type="file" id="logo-up" className="hidden" onChange={handleLogoUpload} accept="image/*" />
+                    <label htmlFor="logo-up" className="flex-1 p-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-3 cursor-pointer hover:bg-slate-50 transition-colors">
+                        <ImageIcon size={20} className="text-slate-400"/>
+                        <span className="text-sm font-bold text-slate-600">Upload Logo</span>
+                    </label>
+                </div>
+                <p className="text-[10px] text-slate-400 text-center uppercase font-bold tracking-tighter">OR PASTE URL BELOW</p>
                 <input 
                     type="text" 
-                    placeholder="https://logo-link.png"
-                    className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:ring-2 ring-blue-500 outline-none"
+                    placeholder="https://brand.com/logo.png"
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-medium focus:ring-4 ring-blue-500/10 outline-none transition-all"
+                    value={logoUrl.startsWith('data:') ? '' : logoUrl}
                     onChange={(e)=>setLogoUrl(e.target.value)}
                 />
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Right Side: Preview Hub */}
+        {/* --- Main: Visualization Hub (8 cols) --- */}
         <div className="lg:col-span-8">
-            <div className="bg-slate-900 rounded-[3rem] p-10 min-h-[600px] flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
-                {/* Background Decor */}
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                    <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-600 rounded-full blur-[120px]"></div>
-                </div>
+            <div className="bg-[#0f172a] rounded-[3.5rem] h-full min-h-[650px] flex flex-col items-center justify-center shadow-2xl relative overflow-hidden group">
+                
+                {/* Visual Flair */}
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none transition-opacity group-hover:opacity-40"></div>
+                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none"></div>
 
                 {publicUrl ? (
-                    <div className="w-full flex flex-col md:flex-row gap-12 items-center z-10 animate-in zoom-in duration-500">
-                        {/* Custom QR Canvas */}
-                        <div className="flex flex-col items-center group">
-                            <div className="bg-white p-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative transition-transform hover:scale-105">
-                                <QRCodeCanvas 
-                                    value={getARViewLink()} 
-                                    size={240} 
-                                    fgColor={qrColor}
-                                    bgColor={qrBg}
-                                    level="H"
-                                    imageSettings={logoUrl ? {
-                                        src: logoUrl,
-                                        height: 40,
-                                        width: 40,
-                                        excavate: true,
-                                    } : null}
-                                />
-                                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black px-4 py-1 rounded-full whitespace-nowrap shadow-lg">
-                                    LIVE EXPERIENCE READY
+                    <div className="w-full h-full p-8 md:p-16 flex flex-col lg:flex-row gap-12 items-center z-10 animate-in fade-in zoom-in duration-500">
+                        
+                        {/* 1. Branded QR Output */}
+                        <div className="space-y-8 flex flex-col items-center">
+                            <div className="relative p-2 bg-gradient-to-br from-white/20 to-white/5 rounded-[3.5rem] backdrop-blur-xl border border-white/10 shadow-2xl">
+                                <div className="bg-white p-8 rounded-[3rem] shadow-inner relative overflow-hidden">
+                                    <QRCodeCanvas 
+                                        value={getARViewLink()} 
+                                        size={260} 
+                                        fgColor={qrColor}
+                                        bgColor={qrBg}
+                                        level="H"
+                                        imageSettings={logoUrl ? {
+                                            src: logoUrl,
+                                            height: 50,
+                                            width: 50,
+                                            excavate: true,
+                                        } : null}
+                                    />
+                                </div>
+                                {/* Scan Badge */}
+                                <div className="absolute -top-4 -right-4 bg-blue-600 text-white p-4 rounded-full shadow-xl shadow-blue-900/40 rotate-12 flex items-center justify-center">
+                                    <Smartphone size={24}/>
                                 </div>
                             </div>
+                            
                             <button 
-                                onClick={() => {navigator.clipboard.writeText(getARViewLink()); alert("Link Copied!")}}
-                                className="mt-10 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold"
+                                onClick={() => {navigator.clipboard.writeText(getARViewLink()); alert("Link Secured to Clipboard!")}}
+                                className="group flex items-center gap-3 bg-white/10 hover:bg-white text-white hover:text-slate-900 px-8 py-4 rounded-2xl transition-all font-bold text-sm shadow-xl"
                             >
-                                <Share2 size={16}/> Copy Deployment Link
+                                <Share2 size={18} className="group-hover:scale-110 transition-transform"/>
+                                COPY DEPLOYMENT LINK
                             </button>
                         </div>
 
-                        {/* 3D Preview */}
-                        <div className="flex-1 w-full h-[400px] bg-white/5 backdrop-blur-sm rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-inner">
+                        {/* 2. Pro Viewport */}
+                        <div className="flex-1 w-full h-[500px] rounded-[3.5rem] border border-white/10 bg-gradient-to-b from-white/5 to-transparent relative shadow-2xl overflow-hidden group/viewer">
+                            <div className="absolute top-6 left-6 z-10 bg-blue-600/20 backdrop-blur-xl text-blue-300 px-4 py-2 rounded-full text-[10px] font-black tracking-widest border border-blue-500/20 uppercase">
+                                Interactive 3D Preview
+                            </div>
+                            <div className="absolute bottom-6 right-6 z-10 text-white/20 group-hover/viewer:text-white/40 transition-colors">
+                                <MousePointer2 size={24}/>
+                            </div>
                             <model-viewer 
                                 src={modelUrl} 
                                 auto-rotate 
                                 camera-controls 
+                                shadow-intensity="2"
+                                environment-image="neutral"
+                                exposure="1.2"
                                 style={{width:'100%', height:'100%'}}
                             />
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center space-y-4 opacity-30 z-10">
-                        <div className="inline-block p-10 border-4 border-dashed border-white/10 rounded-full mb-4">
-                            <Smartphone size={60} className="text-white"/>
+                    <div className="text-center space-y-8 z-10 animate-in fade-in duration-1000">
+                        <div className="relative inline-block">
+                           <div className="absolute inset-0 bg-blue-500 blur-[40px] opacity-20 animate-pulse"></div>
+                           <div className="relative bg-white/5 border border-white/10 p-12 rounded-[3rem] backdrop-blur-md">
+                              <Box size={80} className="text-white/20 mx-auto" strokeWidth={1}/>
+                           </div>
                         </div>
-                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">System Idle</h3>
-                        <p className="text-slate-400 text-sm max-w-xs mx-auto">Upload a 3D asset to generate a branded AR gateway.</p>
+                        <div className="space-y-3">
+                            <h3 className="text-3xl font-black text-white uppercase tracking-tighter">Waiting for Asset</h3>
+                            <p className="text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
+                                Upload a GLB file to unlock the Branding Suite and generate your custom AR gateway.
+                            </p>
+                        </div>
                     </div>
                 )}
             </div>
