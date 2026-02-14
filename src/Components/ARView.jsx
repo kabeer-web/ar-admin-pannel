@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Target, Cpu, Activity, Info } from 'lucide-react';
+// Yahan 'Box' add kiya hai jo tumhare code mein missing tha
+import { ChevronLeft, Target, Cpu, Activity, Info, Box } from 'lucide-react'; 
 import '@google/model-viewer';
 
 const ARView = () => {
@@ -12,7 +13,6 @@ const ARView = () => {
   const modelUrl = rawModelUrl ? decodeURIComponent(rawModelUrl).trim() : null;
 
   useEffect(() => {
-    // Artificial delay for that "AI Loading" feel
     const timer = setTimeout(() => setIsLoaded(true), 1500);
     return () => clearTimeout(timer);
   }, []);
@@ -62,13 +62,6 @@ const ARView = () => {
         </div>
       </div>
 
-      {/* --- SIDEBAR UTILS (Responsive Desktop/Mobile) --- */}
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 z-40 hidden sm:flex flex-col gap-4 pointer-events-none">
-         {[1, 2, 3].map((i) => (
-           <div key={i} className="w-[1px] h-12 bg-gradient-to-b from-transparent via-emerald-500/20 to-transparent"></div>
-         ))}
-      </div>
-
       {/* --- THE ENGINE (Model Viewer) --- */}
       <model-viewer
         src={modelUrl}
@@ -82,27 +75,22 @@ const ARView = () => {
         environment-image="neutral"
         interaction-prompt="auto"
         style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
-        className="reveal"
       >
-        {/* --- DYNAMIC AR BUTTON (Mobile Specific Styling) --- */}
         <button
           slot="ar-button"
-          className="absolute bottom-8 md:bottom-12 left-1/2 -translate-x-1/2 bg-emerald-600 hover:bg-emerald-400 text-black px-8 md:px-12 py-4 md:py-6 rounded-2xl font-black shadow-[0_20px_60px_rgba(16,185,129,0.4)] z-[9999] uppercase tracking-[0.2em] text-[10px] md:text-xs flex items-center gap-4 transition-all active:scale-95 border-b-4 border-emerald-800"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-emerald-600 text-black px-10 py-5 rounded-2xl font-black shadow-[0_15px_40px_rgba(16,185,129,0.4)] z-[9999] uppercase tracking-widest text-xs flex items-center gap-3 border-none"
         >
-          <Target size={18} className="animate-spin-slow" /> 👋 View In Your Room
+          <Target size={20} /> 👋 View In Your Room
         </button>
-
-        {/* --- SCANNING LINE EFFECT --- */}
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none bg-[linear-gradient(rgba(16,185,129,0.02)_1.5px,transparent_1.5px)] bg-[size:100%_3px] opacity-50"></div>
       </model-viewer>
 
       {/* --- FOOTER SPECS --- */}
       <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end pointer-events-none z-40">
         <div className="space-y-1">
-           <p className="text-[8px] font-bold text-emerald-800 uppercase tracking-widest flex items-center gap-2">
+           <p className="text-[8px] font-bold text-emerald-800 uppercase tracking-widest flex items-center gap-2 text-left">
              <Info size={10} /> Model Orientation: Optimized
            </p>
-           <p className="text-[8px] font-bold text-emerald-800 uppercase tracking-widest">Light Source: Neural Environment</p>
+           <p className="text-[8px] font-bold text-emerald-800 uppercase tracking-widest text-left">Light Source: Neural Environment</p>
         </div>
         <div className="text-right">
            <div className="p-2 border border-emerald-500/10 rounded-lg">
@@ -111,7 +99,6 @@ const ARView = () => {
         </div>
       </div>
 
-      {/* --- TAILWIND CUSTOM ANIMATIONS --- */}
       <style>{`
         @keyframes loading-bar {
           0% { transform: translateX(-100%); }
@@ -119,9 +106,6 @@ const ARView = () => {
         }
         .animate-loading-bar {
           animation: loading-bar 1.5s infinite linear;
-        }
-        .animate-spin-slow {
-          animation: spin 4s linear infinite;
         }
       `}</style>
 
