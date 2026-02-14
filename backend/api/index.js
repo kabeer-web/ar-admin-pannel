@@ -34,5 +34,4 @@ app.post('/api/upload-model', upload.single('model'), async (req, res) => {
   }
 });
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`🚀 Backend live on port ${PORT}`));
+module.exports = app;
