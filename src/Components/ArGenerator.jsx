@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Upload, Smartphone, Loader2, AlertCircle, Box, CheckCircle2, Copy, Zap, Info } from 'lucide-react';
+import { Upload, Smartphone, Loader2, AlertCircle, Box, CheckCircle2, Palette, Image as ImageIcon, Zap, Info, Share2 } from 'lucide-react';
 import axios from 'axios';
 import '@google/model-viewer';
 
@@ -11,17 +11,16 @@ const ArGenerator = () => {
   const [uploadStep, setUploadStep] = useState('');
   const [error, setError] = useState(null);
 
+  // --- BRANDING STATES ---
+  const [qrColor, setQrColor] = useState('#000000');
+  const [qrBg, setQrBg] = useState('#ffffff');
+  const [logoUrl, setLogoUrl] = useState(''); // Logo link ya base64
+
   const API_BASE_URL = "http://localhost:5000"; 
 
   const getARViewLink = () => {
     if (!publicUrl) return '';
     return `${window.location.origin}/view?model=${encodeURIComponent(publicUrl)}`;
-  };
-
-  const copyToNotion = () => {
-    navigator.clipboard.writeText(getARViewLink());
-    // Ek toast ya alert dikhane ke liye
-    alert("🚀 Notion Ready Link Copied!");
   };
 
   const handleFileUpload = async (e) => {
@@ -34,128 +33,165 @@ const ArGenerator = () => {
     setModelUrl(URL.createObjectURL(file));
     setLoading(true);
     setError(null);
-    setUploadStep('Preparing Asset...');
+    setUploadStep('Analyzing 3D Mesh...');
 
     const formData = new FormData();
     formData.append('model', file); 
 
     try {
-      setUploadStep('Syncing to Cloudinary...');
+      setUploadStep('Optimizing for Mobile...');
       const res = await axios.post(`${API_BASE_URL}/api/upload-model`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
 
       if (res.data.url) {
-        setUploadStep('Generating QR Experience...');
+        setUploadStep('Ready for Branding...');
         setTimeout(() => {
             setPublicUrl(res.data.url);
             setLoading(false);
         }, 1000);
       }
     } catch (err) {
-      setError("Upload failed. Check connection!");
+      setError("Upload failed. Check Server!");
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8 animate-in fade-in duration-500">
-      {/* Header with Badge */}
+    <div className="max-w-7xl mx-auto p-6 space-y-8 animate-in fade-in duration-700 bg-[#fbfcfd]">
+      
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">AR ASSET HUB</h1>
-          <p className="text-slate-500 font-medium">Generate instant AR previews for your Notion workspace.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter uppercase">Enterprise <span className="text-blue-600">AR</span> Hub</h1>
+          <p className="text-slate-500 font-medium">Professional AR asset deployment with custom brand identity.</p>
         </div>
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-200">
-          <Zap size={14} fill="white"/> v2.0 LIVE ON VERCEL
+        <div className="flex gap-3">
+            <div className="bg-slate-900 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xl">
+               <Zap size={14} className="text-yellow-400 fill-yellow-400"/> PREMIUM VERSION
+            </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left: Action Area */}
+        
+        {/* Left Side: Controls */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                <Box size={16}/> Configuration
+          
+          {/* 1. Upload Section */}
+          <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm transition-all hover:shadow-md">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                <Upload size={14}/> 01. Asset Upload
             </h2>
-            
             <input type="file" id="glb-up" className="hidden" onChange={handleFileUpload} accept=".glb" />
-            <label htmlFor="glb-up" className={`w-full h-48 border-2 border-dashed rounded-[1.5rem] flex flex-col items-center justify-center transition-all cursor-pointer ${loading ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-500'}`}>
+            <label htmlFor="glb-up" className={`w-full h-40 border-2 border-dashed rounded-[1.5rem] flex flex-col items-center justify-center transition-all cursor-pointer ${loading ? 'border-blue-400 bg-blue-50' : 'border-slate-100 bg-slate-50 hover:border-blue-500 hover:bg-white'}`}>
                {loading ? (
                  <div className="flex flex-col items-center gap-3">
                    <Loader2 className="animate-spin text-blue-600" size={32}/>
-                   <span className="text-sm font-bold text-blue-600 animate-pulse">{uploadStep}</span>
+                   <span className="text-sm font-bold text-blue-600">{uploadStep}</span>
                  </div>
                ) : (
                  <div className="flex flex-col items-center gap-2">
-                   <div className="p-4 bg-slate-100 rounded-full text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                     <Upload size={24}/>
-                   </div>
-                   <span className="font-bold text-slate-600">Upload .GLB File</span>
+                   <Box className="text-slate-300" size={32}/>
+                   <span className="font-bold text-slate-500 text-sm tracking-tight">Select 3D Model (.glb)</span>
                  </div>
                )}
             </label>
-
-            {publicUrl && (
-              <div className="mt-6 space-y-3">
-                <button 
-                  onClick={copyToNotion}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-xl shadow-slate-200"
-                >
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/4/45/Notion_app_logo.png" className="w-5 h-5 invert" alt=""/>
-                  Copy Notion Embed
-                </button>
-                <div className="flex items-center gap-2 justify-center text-xs font-bold text-emerald-600 bg-emerald-50 py-2 rounded-lg">
-                    <CheckCircle2 size={14}/> CLOUD SYNC ACTIVE
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Model Info Card */}
-          {publicUrl && (
-            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-200 animate-in slide-in-from-bottom-4 duration-500">
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Info size={14}/> Asset Info
-                </h3>
-                <div className="space-y-3">
-                    <div className="flex justify-between text-sm"><span className="text-slate-500">Format</span> <span className="font-bold text-slate-700 underline decoration-blue-500">Binary GLB</span></div>
-                    <div className="flex justify-between text-sm"><span className="text-slate-500">Optimized</span> <span className="font-bold text-slate-700">Yes</span></div>
-                    <div className="flex justify-between text-sm"><span className="text-slate-500">AR Support</span> <span className="font-bold text-slate-700">Universal</span></div>
+          {/* 2. Customization Section */}
+          <div className={`bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm transition-all ${!publicUrl && 'opacity-50 pointer-events-none'}`}>
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                <Palette size={14}/> 02. Brand Identity
+            </h2>
+            
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">QR Color</label>
+                    <input type="color" value={qrColor} onChange={(e)=>setQrColor(e.target.value)} className="w-full h-10 rounded-lg cursor-pointer border-none" />
                 </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase">QR Background</label>
+                    <input type="color" value={qrBg} onChange={(e)=>setQrBg(e.target.value)} className="w-full h-10 rounded-lg cursor-pointer border-none" />
+                </div>
+              </div>
+
+              <div className="space-y-2 text-left">
+                <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                    <ImageIcon size={10}/> Company Logo (URL)
+                </label>
+                <input 
+                    type="text" 
+                    placeholder="https://logo-link.png"
+                    className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:ring-2 ring-blue-500 outline-none"
+                    onChange={(e)=>setLogoUrl(e.target.value)}
+                />
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Right: Preview Area */}
+        {/* Right Side: Preview Hub */}
         <div className="lg:col-span-8">
-           <div className="bg-slate-900 rounded-[2.5rem] p-8 h-full min-h-[500px] flex flex-col md:flex-row gap-8 items-center shadow-2xl shadow-slate-300">
-              {publicUrl ? (
-                <>
-                  <div className="bg-white p-6 rounded-[2rem] shadow-2xl">
-                    <QRCodeCanvas value={getARViewLink()} size={200} />
-                    <p className="mt-4 text-center text-[10px] font-black text-slate-400 tracking-[0.2em]">SCAN FOR AR</p>
-                  </div>
-                  <div className="flex-1 w-full h-full rounded-[2rem] overflow-hidden border border-white/10 bg-slate-800/50">
-                     <model-viewer 
-                        src={modelUrl} 
-                        auto-rotate 
-                        camera-controls 
-                        style={{width:'100%', height:'100%'}}
-                        className="ar-viewer"
-                     />
-                  </div>
-                </>
-              ) : (
-                <div className="w-full flex flex-col items-center justify-center text-slate-600 gap-4">
-                  <div className="p-8 border-2 border-dashed border-slate-800 rounded-full">
-                    <Smartphone size={48} className="opacity-20"/>
-                  </div>
-                  <p className="font-bold tracking-widest text-xs opacity-40">WAITING FOR ASSET DEPLOYMENT</p>
+            <div className="bg-slate-900 rounded-[3rem] p-10 min-h-[600px] flex flex-col items-center justify-center shadow-2xl relative overflow-hidden">
+                {/* Background Decor */}
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                    <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-blue-600 rounded-full blur-[120px]"></div>
                 </div>
-              )}
-           </div>
+
+                {publicUrl ? (
+                    <div className="w-full flex flex-col md:flex-row gap-12 items-center z-10 animate-in zoom-in duration-500">
+                        {/* Custom QR Canvas */}
+                        <div className="flex flex-col items-center group">
+                            <div className="bg-white p-6 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative transition-transform hover:scale-105">
+                                <QRCodeCanvas 
+                                    value={getARViewLink()} 
+                                    size={240} 
+                                    fgColor={qrColor}
+                                    bgColor={qrBg}
+                                    level="H"
+                                    imageSettings={logoUrl ? {
+                                        src: logoUrl,
+                                        height: 40,
+                                        width: 40,
+                                        excavate: true,
+                                    } : null}
+                                />
+                                <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] font-black px-4 py-1 rounded-full whitespace-nowrap shadow-lg">
+                                    LIVE EXPERIENCE READY
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => {navigator.clipboard.writeText(getARViewLink()); alert("Link Copied!")}}
+                                className="mt-10 flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-bold"
+                            >
+                                <Share2 size={16}/> Copy Deployment Link
+                            </button>
+                        </div>
+
+                        {/* 3D Preview */}
+                        <div className="flex-1 w-full h-[400px] bg-white/5 backdrop-blur-sm rounded-[2.5rem] border border-white/10 overflow-hidden relative shadow-inner">
+                            <model-viewer 
+                                src={modelUrl} 
+                                auto-rotate 
+                                camera-controls 
+                                style={{width:'100%', height:'100%'}}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-center space-y-4 opacity-30 z-10">
+                        <div className="inline-block p-10 border-4 border-dashed border-white/10 rounded-full mb-4">
+                            <Smartphone size={60} className="text-white"/>
+                        </div>
+                        <h3 className="text-xl font-black text-white uppercase tracking-tighter">System Idle</h3>
+                        <p className="text-slate-400 text-sm max-w-xs mx-auto">Upload a 3D asset to generate a branded AR gateway.</p>
+                    </div>
+                )}
+            </div>
         </div>
+
       </div>
     </div>
   );
