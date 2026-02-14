@@ -1,58 +1,50 @@
-require('dotenv').config(); 
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
+const multer = require('multer'); // <--- Naya add karo
+const path = require('path');    // <--- Naya add karo
+const fs = require('fs');        // <--- Folder check karne ke liye
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json());
 
-// Token ko environment variable se le rahe hain (Security ke liye)
-const HF_TOKEN = process.env.HF_TOKEN;
+// --- 1. Uploads Folder Setup ---
+// Agar 'uploads' folder nahi hai toh bana dega
+const uploadDir = 'uploads';
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir);
+}
 
-app.post('/api/generate', async (req, res) => {
-    try {
-        if (!HF_TOKEN) {
-            return res.status(500).json({ error: "HF_TOKEN is missing in .env file!" });
-        }
+// Laptop/Phone ko images access karne ki permission dena
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-        console.log("🚀 Sending request to Hugging Face Router...");
-        
-        const base64Image = req.body.image.split(',')[1];
+// --- 2. Multer Storage Logic ---
+const storage = multer.diskStorage({
+  destination: 'uploads/',
+  filename: (req, file, cb) => {
+    // File ka naam unique banana: time-filename.glb
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+const upload = multer({ storage });
 
-        const response = await axios({
-            method: 'post',
-            url: 'https://router.huggingface.co/hf-inference/models/openai/shap-e-img2img',
-            headers: { 
-                'Authorization': `Bearer ${HF_TOKEN}`,
-                'Content-Type': 'application/json'
-            },
-            data: { inputs: base64Image }, 
-            responseType: 'arraybuffer'
-        });
+// --- 3. API Endpoint ---
+app.post('/api/upload-model', upload.single('model'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-        console.log("✅ 3D Model Received!");
-        const modelBase64 = Buffer.from(response.data, 'binary').toString('base64');
-        
-        res.json({ 
-            status: 'succeeded', 
-            model: `data:model/gltf-binary;base64,${modelBase64}` 
-        });
-
-    } catch (error) {
-        if (error.response) {
-            const errStr = Buffer.from(error.response.data).toString();
-            console.error("❌ Detail:", errStr);
-            
-            if (errStr.includes("loading")) {
-                return res.status(503).json({ error: "AI is warming up... wait 15s!" });
-            }
-        }
-        console.error("❌ Error:", error.message);
-        res.status(500).json({ error: "Server error. Try again." });
-    }
+  // Ye URL aapke phone mein load hoga
+  const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  console.log("✅ File Saved at:", fileUrl);
+  res.json({ url: fileUrl });
 });
 
-app.listen(5000, () => {
-    console.log(`🔥 Backend Live: http://localhost:5000`);
+// Aapka purana /api/generate wala code yahan chalta rahega...
+const PORT = 5000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`
+    🚀 Backend is accessible on:
+    Local:   http://localhost:${PORT}
+    Network: http://YOUR_IP_HERE:${PORT}
+    `);
 });
