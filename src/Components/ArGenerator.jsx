@@ -10,19 +10,24 @@ const ArGenerator = () => {
   const [loading, setLoading] = useState(false);
   const qrRef = useRef();
 
-  // FIX: Relative URL use karein. Vercel pe ye automatically current domain uthayega.
   const API_BASE_URL = window.location.origin;
 
   const getARViewLink = () => {
     if (!publicUrl) return '';
-    // Ye link phone scan pe aapke Vercel ke /view page ko kholega
     return `${window.location.origin}/view?model=${encodeURIComponent(publicUrl)}`;
   };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
+    
     if (!file || !file.name.endsWith('.glb')) {
       alert("Please upload a .glb file");
+      return;
+    }
+
+    // Vercel 4.5MB upload limit check
+    if (file.size > 4.5 * 1024 * 1024) {
+      alert("File too large! Vercel's limit is 4.5MB for free tier. Please upload a smaller .glb file.");
       return;
     }
     
@@ -34,18 +39,18 @@ const ArGenerator = () => {
     formData.append('model', file); 
     
     try {
-      // Relative path call
       const res = await axios.post(`${API_BASE_URL}/api/upload-model`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (res.data.url) {
         setPublicUrl(res.data.url);
-        console.log("Cloudinary Secured Link:", res.data.url);
+        console.log("Uploaded Successfully:", res.data.url);
       }
     } catch (err) { 
       console.error("Upload Error:", err);
-      alert("Upload failed! Please check if your 'api' folder and 'vercel.json' are correct.");
+      const serverError = err.response?.data?.error || err.message;
+      alert(`Server Error: ${serverError}`);
     } finally {
       setLoading(false);
     }
@@ -63,7 +68,7 @@ const ArGenerator = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#020806] p-4 lg:p-8 text-emerald-50">
+    <div className="w-full min-h-screen bg-[#020806] p-4 lg:p-8 text-emerald-50 font-sans">
       <header className="flex flex-col md:flex-row justify-between items-center bg-[#05110d] p-6 md:p-8 rounded-[2.5rem] border border-emerald-500/10 mb-8 gap-4">
         <div className="flex items-center gap-6">
           <div className="bg-[#020806] p-4 rounded-2xl text-emerald-400 border border-emerald-500/20"><Cpu size={32}/></div>
@@ -73,7 +78,7 @@ const ArGenerator = () => {
           <input type="file" id="glb-up" className="hidden" onChange={handleFileUpload} accept=".glb" />
           <label htmlFor="glb-up" className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 px-6 py-4 rounded-xl font-black text-black flex items-center gap-3 uppercase text-sm transition-all shadow-lg shadow-emerald-500/20">
             {loading ? <Activity className="animate-spin" size={20}/> : <Upload size={20}/>}
-            {loading ? 'Processing...' : 'Initialize GLB'}
+            {loading ? 'Uploading...' : 'Upload GLB'}
           </label>
         </div>
       </header>
@@ -93,7 +98,7 @@ const ArGenerator = () => {
             ) : (
               <div className="h-full flex flex-col items-center justify-center opacity-20 py-20">
                 <Box size={100} className="mb-4"/>
-                <p className="font-bold tracking-widest uppercase">No Neural Asset Detected</p>
+                <p className="font-bold tracking-widest uppercase">No GLB File Selected</p>
               </div>
             )}
           </div>
@@ -112,13 +117,14 @@ const ArGenerator = () => {
                   />
                 </div>
                 <button onClick={downloadQRCode} className="w-full max-w-sm bg-emerald-600 hover:bg-emerald-500 py-5 rounded-2xl font-black text-black flex items-center justify-center gap-3 uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20">
-                  <Download size={20}/> Export Matrix
+                  <Download size={20}/> Export QR Code
                 </button>
+                <p className="text-xs text-emerald-500/50 break-all text-center">Cloudinary Link Active</p>
               </div>
             ) : (
               <div className="opacity-10 flex flex-col items-center gap-4 py-20">
                 <Smartphone size={80}/>
-                <p className="font-bold tracking-[0.5em] uppercase text-sm">Standby for Matrix...</p>
+                <p className="font-bold tracking-[0.5em] uppercase text-sm">QR Matrix Standby</p>
               </div>
             )}
           </div>
