@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Upload, Smartphone, Box, Download, Activity, Cpu, Database, Zap, Sun, Palette } from 'lucide-react';
+import { Upload, Smartphone, Box, Download, Activity, Cpu, Database, Zap, Sun, Palette, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import '@google/model-viewer';
 
@@ -12,7 +12,8 @@ const ArGenerator = () => {
   
   // Customization States
   const [exposure, setExposure] = useState(1);
-  const [baseColor, setBaseColor] = useState('#10b981'); 
+  const [baseColor, setBaseColor] = useState('#ffffff'); 
+  const [originalColor, setOriginalColor] = useState(null);
   
   const qrRef = useRef();
   const modelViewerRef = useRef();
@@ -20,15 +21,14 @@ const ArGenerator = () => {
   const CLOUD_NAME = "doa5h9wwi";
   const UPLOAD_PRESET = "ml_default"; 
 
-  // --- FIXED: Yeh function miss tha isliye error aa raha tha ---
   const getARViewLink = () => {
     if (!publicUrl) return '';
     const encodedUrl = encodeURIComponent(publicUrl);
     const encodedColor = encodeURIComponent(baseColor);
-    // URL mein color aur exposure pass kar rahe hain
     return `${window.location.origin}/view?model=${encodedUrl}&color=${encodedColor}&exp=${exposure}`;
   };
 
+  // Color Change Logic
   const handleColorChange = (color) => {
     setBaseColor(color);
     const viewer = modelViewerRef.current;
@@ -40,12 +40,30 @@ const ArGenerator = () => {
     }
   };
 
+  // --- NEW: Restore Original Logic ---
+  const restoreOriginal = () => {
+    const viewer = modelViewerRef.current;
+    if (viewer && viewer.model && originalColor) {
+      const material = viewer.model.materials[0];
+      if (material) {
+        material.pbrMetallicRoughness.setBaseColorFactor(originalColor);
+        setBaseColor('#ffffff'); // Reset picker visual
+      }
+    }
+  };
+
   useEffect(() => {
     const viewer = modelViewerRef.current;
     if (viewer) {
       const loadHandler = () => {
         const materialCount = viewer.model?.materials.length || 0;
         setModelStats(prev => ({ ...prev, materials: materialCount }));
+        
+        // Asli rang ko save karlo pehli baar load hote hi
+        if (viewer.model?.materials[0]) {
+          const color = viewer.model.materials[0].pbrMetallicRoughness.baseColorFactor;
+          setOriginalColor(color);
+        }
       };
       viewer.addEventListener('load', loadHandler);
       return () => viewer.removeEventListener('load', loadHandler);
@@ -58,7 +76,6 @@ const ArGenerator = () => {
       alert("Please upload a .glb file");
       return;
     }
-
     setModelStats({ materials: "Scanning...", size: (file.size / (1024 * 1024)).toFixed(2) + " MB" });
     const localBlob = URL.createObjectURL(file);
     setModelUrl(localBlob);
@@ -72,7 +89,7 @@ const ArGenerator = () => {
       const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, formData);
       if (res.data.secure_url) setPublicUrl(res.data.secure_url);
     } catch (err) {
-      alert(`Upload failed: ${err.response?.data?.error?.message || "Check connection"}`);
+      alert(`Upload failed: ${err.response?.data?.error?.message}`);
     } finally {
       setLoading(false);
     }
@@ -124,11 +141,23 @@ const ArGenerator = () => {
                   exposure={exposure}
                   style={{width:'100%', height:'100%', backgroundColor: 'transparent'}} 
                 />
+                
+                {/* Control Panel with RESTORE Button */}
                 <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-center justify-between gap-4 bg-black/60 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-emerald-500/10 shadow-2xl">
+                  
                   <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl border border-emerald-500/5">
                     <p className="text-[10px] uppercase font-bold text-emerald-500/50 flex items-center gap-2"><Palette size={14}/> Texture Hue</p>
                     <input type="color" value={baseColor} onChange={(e) => handleColorChange(e.target.value)} className="w-10 h-10 rounded-full bg-transparent border-none cursor-pointer" />
+                    
+                    {/* --- NEW BUTTON: RESTORE --- */}
+                    <button 
+                      onClick={restoreOriginal}
+                      className="ml-2 p-2 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl text-emerald-400 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest border border-emerald-500/20"
+                    >
+                      <RotateCcw size={14}/> Restore Source
+                    </button>
                   </div>
+
                   <div className="flex flex-col gap-1 flex-1 max-w-[200px]">
                     <p className="text-[10px] uppercase font-bold text-emerald-500/50 flex items-center gap-2"><Sun size={14}/> Luminance</p>
                     <input type="range" min="0" max="3" step="0.1" value={exposure} onChange={(e) => setExposure(parseFloat(e.target.value))} className="w-full accent-emerald-500" />
