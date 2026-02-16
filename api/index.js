@@ -5,11 +5,10 @@ const cloudinary = require('cloudinary').v2;
 
 const app = express();
 
-// Vercel handles CORS automatically, but safe to keep this
 app.use(cors());
 app.use(express.json());
 
-// Cloudinary Config (Aapki keys already added hain)
+// Cloudinary Config
 cloudinary.config({
   cloud_name: 'doa5h9wwi',
   api_key: '941973848597755',
@@ -40,11 +39,5 @@ app.post('/api/upload-model', upload.single('model'), async (req, res) => {
   }
 });
 
-// Pehle se mojood line:
+// Vercel ke liye sirf export zaroori hai
 module.exports = app;
-
-// YE ADD KAREIN:
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
