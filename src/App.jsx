@@ -4,10 +4,11 @@ import Sidebar from './Components/Sidebar';
 import ArGenerator from './Components/ArGenerator';
 import Generator3D from './Components/Generator3D';
 import QrGenerator from './Components/QrGenerator';
-import ARView from './Components/ARView'; // Isse import zaroor karna
+import ARView from './Components/ARView'; 
+import LandingPage from './Components/LandingPage'; // Isay import karo
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('ar'); // Default tab 'ar' rakha hai
+  const [activeTab, setActiveTab] = useState('ar'); 
 
   return (
     <div className="flex min-h-screen bg-[#020806]">
@@ -27,14 +28,17 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Dashboard route (Generator, Sidebar etc) */}
-        <Route path="/" element={<Dashboard />} />
+        {/* 1. Root Route: Landing Page dikhayega */}
+        <Route path="/" element={<LandingPage />} />
         
-        {/* AR View route (Scan ke baad sirf ye khulega) */}
+        {/* 2. Dashboard Route: Jahan saare generators hain */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        
+        {/* 3. AR View: Scan karne ke baad wala standalone page */}
         <Route path="/view" element={<ARView />} />
         
-        {/* Fallback to Dashboard */}
-        <Route path="*" element={<Dashboard />} />
+        {/* Fallback to Landing Page agar link galat ho */}
+        <Route path="*" element={<LandingPage />} />
       </Routes>
     </Router>
   );
