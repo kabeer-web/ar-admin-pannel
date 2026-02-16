@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/model-viewer": "^3.5.0",
+    "@google/model-viewer": "3.4.0",
     "@react-three/drei": "^9.100.0",
     "@react-three/fiber": "^8.15.0",
     "three": "^0.160.0",
