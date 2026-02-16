@@ -40,5 +40,11 @@ app.post('/api/upload-model', upload.single('model'), async (req, res) => {
   }
 });
 
-// IMPORTANT: Vercel ke liye server ko export karna zaruri hai
+// Pehle se mojood line:
 module.exports = app;
+
+// YE ADD KAREIN:
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
