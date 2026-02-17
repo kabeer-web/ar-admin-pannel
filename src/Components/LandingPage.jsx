@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Zap, Smartphone, Globe, Github, Linkedin, ExternalLink, ArrowRight, Code2, Rocket } from 'lucide-react';
 // Yahan image import ho rahi hai root folder se
-import myProfilePic from './profile-pic.png';
+// LandingPage.jsx ke upar
+import myProfilePic from '../../profile-pic.png';
 
 const LandingPage = () => {
   const navigate = useNavigate();
