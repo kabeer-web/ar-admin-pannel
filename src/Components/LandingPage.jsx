@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Zap, Smartphone, Globe, Github, Linkedin, ExternalLink, ArrowRight, Code2, Rocket } from 'lucide-react';
+// Yahan image import ho rahi hai root folder se
+import myProfilePic from '../profile-pic.png'; 
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -54,12 +56,19 @@ const LandingPage = () => {
       <section className="relative z-10 max-w-5xl mx-auto px-6 py-24">
         <div className="bg-black/40 backdrop-blur-2xl rounded-[4rem] p-10 md:p-16 border border-emerald-500/10 flex flex-col md:flex-row items-center gap-12 shadow-[0_0_100px_rgba(0,0,0,0.5)]">
           
-          {/* Neon Profile Pic Frame */}
+          {/* Real Profile Image with Neon Frame */}
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-emerald-800 rounded-[3.5rem] blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative w-56 h-56 rounded-[3rem] bg-[#020806] border-2 border-emerald-500/20 flex flex-col items-center justify-center overflow-hidden transition-all shadow-2xl">
-              <Code2 size={60} className="text-emerald-500 mb-2 animate-pulse" />
-              <span className="text-emerald-500 font-black text-xl tracking-tighter uppercase">KABEER</span>
+            <div className="relative w-64 h-72 rounded-[3rem] bg-[#020806] border-2 border-emerald-500/20 overflow-hidden transition-all shadow-2xl">
+              {/* TERI REAL PHOTO YAHAN DISPLAY HOGI */}
+              <img 
+                src={myProfilePic} 
+                alt="Kabeer - MERN Stack Dev" 
+                className="w-full h-full object-cover object-top grayscale hover:grayscale-0 transition-all duration-500 scale-110 hover:scale-100"
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
+                <p className="text-emerald-500 font-black text-center text-xs tracking-widest uppercase">Agent Kabeer</p>
+              </div>
             </div>
           </div>
 
@@ -77,8 +86,8 @@ const LandingPage = () => {
             </p>
             
             <div className="flex flex-wrap justify-center md:justify-start gap-6">
-              <a href="#" className="flex items-center gap-2 text-emerald-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"><Github size={18}/> Github</a>
-              <a href="#" className="flex items-center gap-2 text-emerald-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"><Linkedin size={18}/> LinkedIn</a>
+              <a href="https://github.com" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-emerald-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"><Github size={18}/> Github</a>
+              <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-emerald-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest"><Linkedin size={18}/> LinkedIn</a>
               <div className="flex items-center gap-2 text-emerald-500/40 text-xs font-black uppercase tracking-widest border-l border-emerald-500/10 pl-6"><Globe size={18}/> Based in Pakistan</div>
             </div>
           </div>
