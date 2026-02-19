@@ -8,7 +8,6 @@ import axios from 'axios';
 import '@google/model-viewer';
 
 const ArGenerator = () => {
-  // --- States ---
   const [modelUrl, setModelUrl] = useState(null);
   const [publicUrl, setPublicUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,9 +15,6 @@ const ArGenerator = () => {
   const [savedId, setSavedId] = useState(null);
   const [exposure, setExposure] = useState(1);
   const [baseColor, setBaseColor] = useState('#ffffff'); 
-  const [originalColor, setOriginalColor] = useState(null);
-  
-  // Custom Toast State
   const [status, setStatus] = useState({ show: false, message: '', type: 'success' });
 
   const qrRef = useRef();
@@ -28,42 +24,22 @@ const ArGenerator = () => {
   const CLOUD_NAME = "doa5h9wwi";
   const UPLOAD_PRESET = "ml_default"; 
 
-  // --- Functions ---
-
   const showNotification = (msg, type = 'success') => {
     setStatus({ show: true, message: msg, type });
     setTimeout(() => setStatus({ show: false, message: '', type: 'success' }), 3000);
   };
 
+  // Logic to apply color to the live preview
   const handleColorChange = (color) => {
     setBaseColor(color);
     const viewer = modelViewerRef.current;
     if (viewer?.model?.materials[0]) {
-      viewer.model.materials[0].pbrMetallicRoughness.setBaseColorFactor(color);
+      const r = parseInt(color.slice(1, 3), 16) / 255;
+      const g = parseInt(color.slice(3, 5), 16) / 255;
+      const b = parseInt(color.slice(5, 7), 16) / 255;
+      viewer.model.materials[0].pbrMetallicRoughness.setBaseColorFactor([r, g, b, 1]);
     }
   };
-
-  const restoreOriginal = () => {
-    const viewer = modelViewerRef.current;
-    if (viewer?.model?.materials[0] && originalColor) {
-      viewer.model.materials[0].pbrMetallicRoughness.setBaseColorFactor(originalColor);
-      setBaseColor('#ffffff');
-      showNotification("Original Texture Restored", "success");
-    }
-  };
-
-  useEffect(() => {
-    const viewer = modelViewerRef.current;
-    if (viewer) {
-      const loadHandler = () => {
-        if (viewer.model?.materials[0]) {
-          setOriginalColor(viewer.model.materials[0].pbrMetallicRoughness.baseColorFactor);
-        }
-      };
-      viewer.addEventListener('load', loadHandler);
-      return () => viewer.removeEventListener('load', loadHandler);
-    }
-  }, [modelUrl]);
 
   const saveMatrixConfig = async () => {
     if (!publicUrl) return showNotification("Upload a model first!", "error");
@@ -72,7 +48,7 @@ const ArGenerator = () => {
       const response = await axios.post(`${API_BASE_URL}/save-config`, {
         modelName: "Project_Alpha",
         publicUrl: publicUrl,
-        baseColor: baseColor,
+        baseColor: baseColor, 
         exposure: exposure,
         hotspots: [], 
         ownerId: "admin_1" 
@@ -83,7 +59,7 @@ const ArGenerator = () => {
         showNotification("MATRIX SYNCED SUCCESSFULLY", "success");
       }
     } catch (err) {
-      showNotification("SYNC FAILED: CHECK CONNECTION", "error");
+      showNotification("SYNC FAILED", "error");
     } finally {
       setSyncing(false);
     }
@@ -94,136 +70,85 @@ const ArGenerator = () => {
     if (!file) return;
     setModelUrl(URL.createObjectURL(file));
     setLoading(true);
-
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
-
     try {
       const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, formData);
       setPublicUrl(res.data.secure_url);
-      showNotification("GLB INJECTED TO CLOUD", "success");
+      showNotification("GLB INJECTED", "success");
     } catch (err) {
-      showNotification("CLOUDINARY UPLOAD FAILED", "error");
+      showNotification("UPLOAD FAILED", "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#010604] p-4 lg:p-8 text-emerald-50 font-sans relative overflow-hidden">
-      
-      {/* --- CYBERPUNK NOTIFICATION POPUP --- */}
+    <div className="w-full min-h-screen bg-[#010604] p-4 lg:p-8 text-emerald-50 font-sans relative">
       {status.show && (
-        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] transition-all animate-bounce-short">
-          <div className={`flex items-center gap-4 px-8 py-4 rounded-2xl border backdrop-blur-3xl shadow-[0_0_40px_rgba(0,0,0,0.7)] ${
-            status.type === 'success' 
-            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
-            : 'bg-red-500/20 border-red-500/50 text-red-400'
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-bounce-short">
+          <div className={`flex items-center gap-4 px-8 py-4 rounded-2xl border backdrop-blur-3xl shadow-2xl ${
+            status.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' : 'bg-red-500/20 border-red-500/50 text-red-400'
           }`}>
-            {status.type === 'success' ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
-            <span className="font-black uppercase tracking-[0.2em] text-[10px] md:text-xs italic">
-              {status.message}
-            </span>
+            <CheckCircle2 size={20} />
+            <span className="font-black uppercase tracking-widest text-xs italic">{status.message}</span>
           </div>
         </div>
       )}
 
-      {/* --- HEADER --- */}
-      <header className="relative z-10 flex flex-col md:flex-row justify-between items-center bg-black/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-emerald-500/10 mb-8 gap-4 shadow-2xl">
+      <header className="flex flex-col md:flex-row justify-between items-center bg-black/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-emerald-500/10 mb-8 gap-4 shadow-2xl">
         <div className="flex items-center gap-6">
-          <div className="bg-[#020806] p-4 rounded-2xl text-emerald-400 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-            <Cpu size={32} className="animate-pulse text-emerald-500"/>
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">AR <span className="text-emerald-500">MATRIX</span></h1>
-            <p className="text-[10px] text-emerald-500/40 tracking-[0.4em] uppercase font-bold italic">Spatial Memory Active</p>
-          </div>
+          <Cpu size={32} className="text-emerald-500 animate-pulse"/>
+          <h1 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">AR <span className="text-emerald-500">MATRIX</span></h1>
         </div>
-        <div className="flex items-center gap-4">
-          <input type="file" id="glb-up" className="hidden" onChange={handleFileUpload} accept=".glb" />
-          <label htmlFor="glb-up" className="cursor-pointer bg-emerald-600 hover:bg-emerald-400 px-8 py-4 rounded-2xl font-black text-black flex items-center gap-3 uppercase text-sm transition-all shadow-lg active:scale-95">
-            {loading ? <Activity className="animate-spin" size={20}/> : <Upload size={20}/>}
-            {loading ? 'Transmitting...' : 'Injection GLB'}
-          </label>
-        </div>
+        <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-400 px-8 py-4 rounded-2xl font-black text-black flex items-center gap-3 uppercase text-sm transition-all shadow-lg">
+          <input type="file" className="hidden" onChange={handleFileUpload} accept=".glb" />
+          {loading ? <Activity className="animate-spin" size={20}/> : <Upload size={20}/>}
+          INJECTION GLB
+        </label>
       </header>
 
-      {/* --- MAIN GRID --- */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 relative z-10">
-        <div className="xl:col-span-8 flex flex-col gap-6">
-          <div className="bg-black/60 rounded-[3.5rem] h-[550px] md:h-[650px] relative border border-emerald-500/10 overflow-hidden shadow-inner group">
-            {modelUrl ? (
-              <>
-                <model-viewer 
-                  ref={modelViewerRef}
-                  src={modelUrl} 
-                  auto-rotate 
-                  camera-controls 
-                  shadow-intensity="1.5"
-                  exposure={exposure}
-                  style={{width:'100%', height:'100%', backgroundColor: 'transparent'}} 
-                />
-                
-                {/* TOOLBAR */}
-                <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-center justify-between gap-4 bg-black/60 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-emerald-500/10 shadow-2xl">
-                  <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl border border-emerald-500/5">
-                    <p className="text-[10px] uppercase font-bold text-emerald-500/50 flex items-center gap-2"><Palette size={14}/> Texture</p>
-                    <input type="color" value={baseColor} onChange={(e) => handleColorChange(e.target.value)} className="w-10 h-10 rounded-full bg-transparent border-none cursor-pointer" />
-                    <button onClick={restoreOriginal} className="p-2 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-xl text-emerald-400 transition-all border border-emerald-500/20">
-                      <RotateCcw size={14}/>
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-4 flex-1 max-w-[300px]">
-                    <button onClick={saveMatrixConfig} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-black py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
-                      {syncing ? <Activity className="animate-spin" size={14}/> : <Database size={14}/>}
-                      {syncing ? "Syncing..." : "Sync to Matrix"}
-                    </button>
-                    <div className="flex flex-col gap-1 w-24">
-                       <input type="range" min="0" max="3" step="0.1" value={exposure} onChange={(e) => setExposure(parseFloat(e.target.value))} className="w-full accent-emerald-500" />
-                    </div>
-                  </div>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        <div className="xl:col-span-8 bg-black/60 rounded-[3.5rem] h-[550px] relative border border-emerald-500/10 overflow-hidden shadow-2xl">
+          {modelUrl ? (
+            <>
+              <model-viewer 
+                ref={modelViewerRef}
+                src={modelUrl} 
+                camera-controls 
+                exposure={exposure}
+                style={{width:'100%', height:'100%'}} 
+              />
+              <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between bg-black/80 backdrop-blur-md p-6 rounded-[2rem] border border-emerald-500/10">
+                <div className="flex items-center gap-4">
+                  <Palette className="text-emerald-500" size={20}/>
+                  <input type="color" value={baseColor} onChange={(e) => handleColorChange(e.target.value)} className="w-8 h-8 rounded-full bg-transparent border-none cursor-pointer" />
                 </div>
-              </>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center opacity-30">
-                <Box size={100} className="text-emerald-500 animate-pulse"/>
-                <p className="font-bold tracking-[0.8em] uppercase text-sm">System Standby</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* --- QR PANEL --- */}
-        <div className="xl:col-span-4 flex flex-col gap-6">
-          <div className="bg-[#05110d] rounded-[3.5rem] border border-emerald-500/10 p-10 flex flex-col items-center justify-center shadow-2xl min-h-[550px] relative text-center">
-            {savedId ? (
-              <div className="flex flex-col items-center gap-10 w-full z-10">
-                <div className="relative">
-                  <div className="absolute -inset-6 bg-emerald-500/20 blur-2xl rounded-full animate-pulse" />
-                  <div ref={qrRef} className="bg-white p-6 rounded-[2.5rem] border-[12px] border-black shadow-2xl relative z-10">
-                    <QRCodeCanvas value={`${window.location.origin}/view?id=${savedId}`} size={220} fgColor="#000" level="H" />
-                  </div>
+                <div className="flex items-center gap-4 flex-1 max-w-[200px] ml-4">
+                  <input type="range" min="0" max="3" step="0.1" value={exposure} onChange={(e) => setExposure(parseFloat(e.target.value))} className="w-full accent-emerald-500" />
                 </div>
-                <button onClick={() => {
-                  const canvas = qrRef.current.querySelector('canvas');
-                  const link = document.createElement("a");
-                  link.href = canvas.toDataURL("image/png");
-                  link.download = "Matrix-AR-Link.png";
-                  link.click();
-                  showNotification("ASSET EXTRACTED", "success");
-                }} className="w-full bg-emerald-600 hover:bg-emerald-400 py-6 rounded-3xl font-black text-black flex items-center justify-center gap-3 uppercase tracking-widest transition-all shadow-xl">
-                  <Download size={22}/> Extract Asset
+                <button onClick={saveMatrixConfig} className="bg-emerald-500 text-black px-6 py-2 rounded-xl font-black text-[10px] uppercase ml-4">
+                  {syncing ? "Syncing..." : "Sync Matrix"}
                 </button>
               </div>
-            ) : (
-              <div className="opacity-10 flex flex-col items-center gap-8 py-20">
-                <Smartphone size={100} className="text-emerald-500"/>
-                <p className="font-black tracking-[0.4em] uppercase text-xs">Waiting for Sync</p>
+            </>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center opacity-20">
+              <Box size={80} className="mb-4 animate-pulse" />
+              <p className="font-black uppercase tracking-widest">Awaiting Neural Link</p>
+            </div>
+          )}
+        </div>
+        <div className="xl:col-span-4 bg-[#05110d] rounded-[3.5rem] p-10 flex flex-col items-center justify-center border border-emerald-500/10 min-h-[500px]">
+          {savedId ? (
+            <div className="flex flex-col items-center gap-6">
+              <div ref={qrRef} className="bg-white p-6 rounded-[2rem]">
+                <QRCodeCanvas value={`${window.location.origin}/view?id=${savedId}`} size={200} />
               </div>
-            )}
-          </div>
+              <p className="text-emerald-500/50 text-[10px] uppercase font-bold tracking-widest">Link Encrypted & Ready</p>
+            </div>
+          ) : <Smartphone size={80} className="opacity-10 text-emerald-500"/>}
         </div>
       </div>
     </div>
