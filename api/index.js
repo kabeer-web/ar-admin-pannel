@@ -17,15 +17,12 @@ const ARModelSchema = new mongoose.Schema({
   publicUrl: String,
   baseColor: String,
   exposure: Number,
-  ownerId: String,
   createdAt: { type: Date, default: Date.now }
 });
 
 const ARModel = mongoose.model('ARModel', ARModelSchema);
 
-// --- ROUTES ---
-
-// 1. Get All Models
+// Get All Models
 app.get('/api/get-all-models', async (req, res) => {
   try {
     const models = await ARModel.find().sort({ createdAt: -1 });
@@ -33,49 +30,47 @@ app.get('/api/get-all-models', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 2. SAVE OR UPDATE (The Core Fix)
+// Save or Update
 app.post('/api/save-config', async (req, res) => {
   try {
     const { id, publicUrl, baseColor, exposure } = req.body;
 
-    // Check agar id exist karti hai to UPDATE karo
-    if (id && id !== "pending") {
+    if (id && mongoose.Types.ObjectId.isValid(id)) {
       const updated = await ARModel.findByIdAndUpdate(
         id,
-        { baseColor, exposure }, // Editing mein sirf ye badalte hain
+        { baseColor, exposure },
         { new: true }
       );
-      console.log("Updated Model:", id);
       return res.json({ success: true, modelId: updated._id });
     } 
     
-    // Warna Naya Banao
     const newModel = new ARModel({
       modelName: `Project_${Date.now()}`,
       publicUrl,
-      baseColor,
-      exposure,
-      ownerId: "admin_1"
+      baseColor: baseColor || "#ffffff",
+      exposure: exposure || 1
     });
     const saved = await newModel.save();
-    console.log("New Model Created");
     res.json({ success: true, modelId: saved._id });
-
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 3. Delete
+// Delete
 app.delete('/api/delete-model/:id', async (req, res) => {
-  await ARModel.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
+  try {
+    await ARModel.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 4. Single Config for AR View
+// Get Single
 app.get('/api/get-config/:id', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ error: "Invalid ID" });
     const config = await ARModel.findById(req.params.id);
+    if (!config) return res.status(404).json({ error: "Not Found" });
     res.json(config);
-  } catch (err) { res.status(404).json({ error: "Not found" }); }
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 const PORT = 5000;
