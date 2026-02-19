@@ -2,10 +2,13 @@ import React from 'react';
 import { 
   Box, QrCode, Sparkles, LayoutDashboard, 
   ChevronRight, Leaf, Zap, ShieldCheck, 
-  Calculator // Naya Icon
+  Calculator, LogOut // Logout Icon add kiya
 } from 'lucide-react';
+import { useClerk } from '@clerk/clerk-react'; // Clerk Hook
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
+  const { signOut } = useClerk(); // SignOut function extract kiya
+
   return (
     <div className="w-72 h-screen flex flex-col p-6 sticky top-0 transition-all duration-500
       bg-[#040d0a] border-r border-emerald-900/30 shadow-[10px_0_30px_rgba(0,0,0,0.5)] z-50">
@@ -46,8 +49,6 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           active={activeTab === 'ar'} 
           onClick={() => setActiveTab('ar')} 
         />
-
-        {/* --- NEW: NEURAL CALCULATOR ITEM --- */}
         <NavItem 
           icon={<Calculator size={20}/>} 
           label="Math Processor" 
@@ -56,30 +57,32 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         />
       </nav>
 
-      {/* --- FOOTER STATUS --- */}
+      {/* --- FOOTER STATUS & LOGOUT --- */}
       <div className="mt-auto space-y-4">
+        {/* Logout Button */}
+        <button 
+          onClick={() => signOut()}
+          className="w-full group flex items-center gap-4 p-4 rounded-2xl border border-red-900/20 text-red-900 hover:text-red-400 hover:bg-red-500/5 transition-all duration-300"
+        >
+          <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="font-black text-[11px] tracking-widest uppercase">Terminate Session</span>
+        </button>
+
         <div className="p-5 rounded-[2rem] bg-emerald-950/20 border border-emerald-900/30">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">System Online</span>
           </div>
           <p className="text-[11px] text-emerald-100/40 font-medium leading-relaxed">
-            Neural nodes active. All systems nominal.
+            Neural nodes active. Session encrypted.
           </p>
-        </div>
-
-        <div className="flex items-center justify-between px-4 py-2 opacity-30 hover:opacity-100 transition-opacity">
-            <div className="flex items-center gap-2">
-                <Zap size={14} className="text-emerald-500" />
-                <span className="text-[10px] font-bold tracking-tighter">v2.4.0-Stable</span>
-            </div>
-            <ShieldCheck size={14} />
         </div>
       </div>
     </div>
   );
 };
 
+// NavItem component stays the same as your provided code
 const NavItem = ({ icon, label, active, onClick }) => (
   <div 
     onClick={onClick} 
@@ -89,10 +92,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
         : 'text-emerald-900 hover:text-emerald-100 hover:bg-emerald-950/30'
       }`}
   >
-    {active && (
-        <div className="absolute left-0 top-0 h-full w-1 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,1)]"></div>
-    )}
-
+    {active && <div className="absolute left-0 top-0 h-full w-1 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,1)]"></div>}
     <div className="flex items-center gap-4 z-10">
       <span className={`transition-all duration-500 ${active ? 'scale-110' : 'group-hover:text-emerald-400 group-hover:scale-110'}`}>
         {icon}
@@ -101,7 +101,6 @@ const NavItem = ({ icon, label, active, onClick }) => (
         {label}
       </span>
     </div>
-
     {active ? (
       <div className="w-1 h-1 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,1)]"></div>
     ) : (
