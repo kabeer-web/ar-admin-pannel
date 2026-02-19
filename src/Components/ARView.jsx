@@ -11,6 +11,7 @@ const ARView = () => {
   useEffect(() => {
     const id = searchParams.get('id');
     if (id) {
+      // Timestamp add kiya taake har baar fresh data aaye
       axios.get(`https://ar-admin-pannel.vercel.app/api/get-config/${id}?t=${Date.now()}`)
         .then(res => setConfig(res.data))
         .catch(err => console.error("Neural Link Failed"));
@@ -28,49 +29,46 @@ const ARView = () => {
       viewer.model.materials.forEach((mat) => {
         mat.pbrMetallicRoughness.setBaseColorFactor([r, g, b, 1]);
       });
+      console.log("Color Injected ✅");
     }
   };
 
-  if (!config) return <div className="h-screen bg-black flex items-center justify-center text-emerald-500 font-mono italic">SYNCING...</div>;
+  if (!config) return <div className="h-screen bg-black flex items-center justify-center text-emerald-500 font-mono italic">SYNCING WITH MATRIX...</div>;
 
   return (
     <div className="w-screen h-screen bg-black overflow-hidden relative">
       <model-viewer
         ref={modelViewerRef}
-        src={config.publicUrl} 
-        // ios-src ke bina iPhone "Object could not be opened" bolega
-        ios-src={config.publicUrl} 
+        src={config.publicUrl}
         ar
-        ar-modes="webxr quick-look scene-viewer"
+        ar-modes="webxr quick-look" // Scene viewer hata diya kyunki wo settings uda deta hai
         camera-controls
         exposure={config.exposure || 1}
         onLoad={forceApply}
-        // iPhone AR ke liye ye zaruri hai
-        quick-look-browsers="safari chrome"
-        style={{ width: '100%', height: '100%' }}
+        ar-status="not-presenting"
+        style={{ width: '100%', height: '100%', backgroundColor: 'black' }}
       >
+        {/* Forcefully Visible AR Button */}
         <button 
           slot="ar-button" 
-          style={{
-            display: 'block',
-            position: 'fixed',
-            bottom: '60px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: '#10b981',
-            color: 'black',
-            padding: '20px 45px',
-            borderRadius: '12px',
-            fontWeight: '900',
-            zIndex: 999999,
-            border: 'none',
-            boxShadow: '0 0 40px rgba(16,185,129,0.5)',
-            textTransform: 'uppercase'
-          }}
+          id="ar-button"
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-emerald-500 text-black px-10 py-5 rounded-full font-black uppercase tracking-tighter shadow-[0_0_50px_rgba(16,185,129,0.6)] z-[9999] block !important"
+          style={{ display: 'block', visibility: 'visible', opacity: 1 }}
         >
-          Activate AR Matrix
+          START AR MATRIX
         </button>
       </model-viewer>
+
+      {/* CSS to make sure button is NEVER hidden by model-viewer */}
+      <style>{`
+        #ar-button {
+          display: block !important;
+          visibility: visible !important;
+        }
+        model-viewer#ar-button:not([ar-status="not-presenting"]) {
+          display: block !important;
+        }
+      `}</style>
     </div>
   );
 };
