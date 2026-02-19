@@ -1,29 +1,40 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Upload, Smartphone, Box, Download, Activity, Cpu, Database, Palette, RotateCcw } from 'lucide-react';
+import { 
+  Upload, Smartphone, Box, Download, Activity, 
+  Cpu, Database, Palette, RotateCcw, CheckCircle2, XCircle, Zap 
+} from 'lucide-react';
 import axios from 'axios';
 import '@google/model-viewer';
 
 const ArGenerator = () => {
+  // --- States ---
   const [modelUrl, setModelUrl] = useState(null);
   const [publicUrl, setPublicUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [savedId, setSavedId] = useState(null);
-  
   const [exposure, setExposure] = useState(1);
   const [baseColor, setBaseColor] = useState('#ffffff'); 
   const [originalColor, setOriginalColor] = useState(null);
   
+  // Custom Toast State
+  const [status, setStatus] = useState({ show: false, message: '', type: 'success' });
+
   const qrRef = useRef();
   const modelViewerRef = useRef();
 
-  // URL FIXED: Proper HTTPS for Vercel
   const API_BASE_URL = "https://ar-admin-pannel.vercel.app/api";
   const CLOUD_NAME = "doa5h9wwi";
   const UPLOAD_PRESET = "ml_default"; 
 
-  // Texture logic restore
+  // --- Functions ---
+
+  const showNotification = (msg, type = 'success') => {
+    setStatus({ show: true, message: msg, type });
+    setTimeout(() => setStatus({ show: false, message: '', type: 'success' }), 3000);
+  };
+
   const handleColorChange = (color) => {
     setBaseColor(color);
     const viewer = modelViewerRef.current;
@@ -37,6 +48,7 @@ const ArGenerator = () => {
     if (viewer?.model?.materials[0] && originalColor) {
       viewer.model.materials[0].pbrMetallicRoughness.setBaseColorFactor(originalColor);
       setBaseColor('#ffffff');
+      showNotification("Original Texture Restored", "success");
     }
   };
 
@@ -54,7 +66,7 @@ const ArGenerator = () => {
   }, [modelUrl]);
 
   const saveMatrixConfig = async () => {
-    if (!publicUrl) return alert("Pehle model upload karein!");
+    if (!publicUrl) return showNotification("Upload a model first!", "error");
     setSyncing(true);
     try {
       const response = await axios.post(`${API_BASE_URL}/save-config`, {
@@ -68,11 +80,10 @@ const ArGenerator = () => {
 
       if (response.data.success) {
         setSavedId(response.data.modelId);
-        alert("Matrix Synced! ✅");
+        showNotification("MATRIX SYNCED SUCCESSFULLY", "success");
       }
     } catch (err) {
-      console.error(err);
-      alert("Sync Failed: Vercel connection error");
+      showNotification("SYNC FAILED: CHECK CONNECTION", "error");
     } finally {
       setSyncing(false);
     }
@@ -91,15 +102,34 @@ const ArGenerator = () => {
     try {
       const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, formData);
       setPublicUrl(res.data.secure_url);
+      showNotification("GLB INJECTED TO CLOUD", "success");
     } catch (err) {
-      alert("Cloudinary Upload Failed");
+      showNotification("CLOUDINARY UPLOAD FAILED", "error");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#010604] p-4 lg:p-8 text-emerald-50 font-sans relative">
+    <div className="w-full min-h-screen bg-[#010604] p-4 lg:p-8 text-emerald-50 font-sans relative overflow-hidden">
+      
+      {/* --- CYBERPUNK NOTIFICATION POPUP --- */}
+      {status.show && (
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] transition-all animate-bounce-short">
+          <div className={`flex items-center gap-4 px-8 py-4 rounded-2xl border backdrop-blur-3xl shadow-[0_0_40px_rgba(0,0,0,0.7)] ${
+            status.type === 'success' 
+            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400' 
+            : 'bg-red-500/20 border-red-500/50 text-red-400'
+          }`}>
+            {status.type === 'success' ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
+            <span className="font-black uppercase tracking-[0.2em] text-[10px] md:text-xs italic">
+              {status.message}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* --- HEADER --- */}
       <header className="relative z-10 flex flex-col md:flex-row justify-between items-center bg-black/40 backdrop-blur-xl p-6 md:p-8 rounded-[2.5rem] border border-emerald-500/10 mb-8 gap-4 shadow-2xl">
         <div className="flex items-center gap-6">
           <div className="bg-[#020806] p-4 rounded-2xl text-emerald-400 border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
@@ -119,6 +149,7 @@ const ArGenerator = () => {
         </div>
       </header>
 
+      {/* --- MAIN GRID --- */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 relative z-10">
         <div className="xl:col-span-8 flex flex-col gap-6">
           <div className="bg-black/60 rounded-[3.5rem] h-[550px] md:h-[650px] relative border border-emerald-500/10 overflow-hidden shadow-inner group">
@@ -134,7 +165,7 @@ const ArGenerator = () => {
                   style={{width:'100%', height:'100%', backgroundColor: 'transparent'}} 
                 />
                 
-                {/* TOOLBAR RESTORED */}
+                {/* TOOLBAR */}
                 <div className="absolute bottom-6 left-6 right-6 flex flex-wrap items-center justify-between gap-4 bg-black/60 backdrop-blur-2xl p-6 rounded-[2.5rem] border border-emerald-500/10 shadow-2xl">
                   <div className="flex items-center gap-4 bg-black/40 p-3 rounded-2xl border border-emerald-500/5">
                     <p className="text-[10px] uppercase font-bold text-emerald-500/50 flex items-center gap-2"><Palette size={14}/> Texture</p>
@@ -164,6 +195,7 @@ const ArGenerator = () => {
           </div>
         </div>
 
+        {/* --- QR PANEL --- */}
         <div className="xl:col-span-4 flex flex-col gap-6">
           <div className="bg-[#05110d] rounded-[3.5rem] border border-emerald-500/10 p-10 flex flex-col items-center justify-center shadow-2xl min-h-[550px] relative text-center">
             {savedId ? (
@@ -180,7 +212,8 @@ const ArGenerator = () => {
                   link.href = canvas.toDataURL("image/png");
                   link.download = "Matrix-AR-Link.png";
                   link.click();
-                }} className="w-full bg-emerald-600 hover:bg-emerald-400 py-6 rounded-3xl font-black text-black flex items-center justify-center gap-3 uppercase tracking-widest transition-all">
+                  showNotification("ASSET EXTRACTED", "success");
+                }} className="w-full bg-emerald-600 hover:bg-emerald-400 py-6 rounded-3xl font-black text-black flex items-center justify-center gap-3 uppercase tracking-widest transition-all shadow-xl">
                   <Download size={22}/> Extract Asset
                 </button>
               </div>
