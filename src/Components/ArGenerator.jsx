@@ -19,7 +19,7 @@ const ArGenerator = () => {
   const qrRef = useRef();
   const modelViewerRef = useRef();
 
-  const API_BASE_URL = "http://localhost:5000/api";
+  const API_BASE_URL = "http://https://ar-admin-pannel.vercel.app/api";
   const CLOUD_NAME = "doa5h9wwi";
   const UPLOAD_PRESET = "ml_default"; 
 
