@@ -31,51 +31,46 @@ const ARView = () => {
     }
   };
 
-  if (!config) return <div className="h-screen bg-black flex items-center justify-center text-emerald-500 font-mono italic">INITIALIZING MATRIX...</div>;
+  if (!config) return <div className="h-screen bg-black flex items-center justify-center text-emerald-500 font-mono italic">SYNCING...</div>;
 
   return (
     <div className="w-screen h-screen bg-black overflow-hidden relative">
       <model-viewer
         ref={modelViewerRef}
-        src={config.publicUrl} // GLB File
-        ios-src={config.publicUrl} // iPhone ke liye (Agar USDZ nahi hai to ye convert karne ki koshish karega)
+        src={config.publicUrl} 
+        // ios-src ke bina iPhone "Object could not be opened" bolega
+        ios-src={config.publicUrl} 
         ar
-        ar-modes="quick-look webxr scene-viewer" 
+        ar-modes="webxr quick-look scene-viewer"
         camera-controls
         exposure={config.exposure || 1}
         onLoad={forceApply}
-        style={{ width: '100%', height: '100%', backgroundColor: 'black' }}
+        // iPhone AR ke liye ye zaruri hai
+        quick-look-browsers="safari chrome"
+        style={{ width: '100%', height: '100%' }}
       >
-        {/* iPhone Fix: Button ko center mein laane ke liye inline styles use kiye hain */}
         <button 
           slot="ar-button" 
           style={{
             display: 'block',
-            position: 'absolute',
-            bottom: '100px',
+            position: 'fixed',
+            bottom: '60px',
             left: '50%',
             transform: 'translateX(-50%)',
             backgroundColor: '#10b981',
             color: 'black',
-            padding: '18px 40px',
-            borderRadius: '50px',
+            padding: '20px 45px',
+            borderRadius: '12px',
             fontWeight: '900',
-            fontSize: '14px',
+            zIndex: 999999,
             border: 'none',
-            zIndex: 9999,
-            boxShadow: '0 0 30px rgba(16,185,129,0.5)'
+            boxShadow: '0 0 40px rgba(16,185,129,0.5)',
+            textTransform: 'uppercase'
           }}
         >
-          OPEN NEURAL AR
+          Activate AR Matrix
         </button>
       </model-viewer>
-
-      {/* iPhone 8 Safari Fix: Force button visibility */}
-      <style>{`
-        model-viewer::part(default-ar-button) {
-          display: block !important;
-        }
-      `}</style>
     </div>
   );
 };
