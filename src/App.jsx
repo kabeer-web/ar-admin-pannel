@@ -9,6 +9,7 @@ import Generator3D from './Components/Generator3D';
 import QrGenerator from './Components/QrGenerator';
 import ARView from './Components/ARView'; 
 import LandingPage from './Components/LandingPage';
+import MatrixCalculator from './Components/MatrixCalculator';
 
 const PUBLISHABLE_KEY = "pk_test_c3RpcnJpbmctc2NvcnBpb24tNDguY2xlcmsuYWNjb3VudHMuZGV2JA";
 
@@ -65,6 +66,7 @@ function App() {
           
           <Route path="/view" element={<ARView />} />
           <Route path="*" element={<Navigate to="/" />} />
+          <Route path="/calculator" element={<MatrixCalculator />} />
         </Routes>
       </Router>
     </ClerkProvider>
