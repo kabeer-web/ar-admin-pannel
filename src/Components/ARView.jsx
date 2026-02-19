@@ -11,7 +11,6 @@ const ARView = () => {
   useEffect(() => {
     const id = searchParams.get('id');
     if (id) {
-      // Timestamp add kiya taake har baar fresh data aaye
       axios.get(`https://ar-admin-pannel.vercel.app/api/get-config/${id}?t=${Date.now()}`)
         .then(res => setConfig(res.data))
         .catch(err => console.error("Neural Link Failed"));
@@ -29,43 +28,51 @@ const ARView = () => {
       viewer.model.materials.forEach((mat) => {
         mat.pbrMetallicRoughness.setBaseColorFactor([r, g, b, 1]);
       });
-      console.log("Color Injected ✅");
     }
   };
 
-  if (!config) return <div className="h-screen bg-black flex items-center justify-center text-emerald-500 font-mono italic">SYNCING WITH MATRIX...</div>;
+  if (!config) return <div className="h-screen bg-black flex items-center justify-center text-emerald-500 font-mono italic">INITIALIZING MATRIX...</div>;
 
   return (
     <div className="w-screen h-screen bg-black overflow-hidden relative">
       <model-viewer
         ref={modelViewerRef}
-        src={config.publicUrl}
+        src={config.publicUrl} // GLB File
+        ios-src={config.publicUrl} // iPhone ke liye (Agar USDZ nahi hai to ye convert karne ki koshish karega)
         ar
-        ar-modes="webxr quick-look" // Scene viewer hata diya kyunki wo settings uda deta hai
+        ar-modes="quick-look webxr scene-viewer" 
         camera-controls
         exposure={config.exposure || 1}
         onLoad={forceApply}
-        ar-status="not-presenting"
         style={{ width: '100%', height: '100%', backgroundColor: 'black' }}
       >
-        {/* Forcefully Visible AR Button */}
+        {/* iPhone Fix: Button ko center mein laane ke liye inline styles use kiye hain */}
         <button 
           slot="ar-button" 
-          id="ar-button"
-          className="absolute bottom-20 left-1/2 -translate-x-1/2 bg-emerald-500 text-black px-10 py-5 rounded-full font-black uppercase tracking-tighter shadow-[0_0_50px_rgba(16,185,129,0.6)] z-[9999] block !important"
-          style={{ display: 'block', visibility: 'visible', opacity: 1 }}
+          style={{
+            display: 'block',
+            position: 'absolute',
+            bottom: '100px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#10b981',
+            color: 'black',
+            padding: '18px 40px',
+            borderRadius: '50px',
+            fontWeight: '900',
+            fontSize: '14px',
+            border: 'none',
+            zIndex: 9999,
+            boxShadow: '0 0 30px rgba(16,185,129,0.5)'
+          }}
         >
-          START AR MATRIX
+          OPEN NEURAL AR
         </button>
       </model-viewer>
 
-      {/* CSS to make sure button is NEVER hidden by model-viewer */}
+      {/* iPhone 8 Safari Fix: Force button visibility */}
       <style>{`
-        #ar-button {
-          display: block !important;
-          visibility: visible !important;
-        }
-        model-viewer#ar-button:not([ar-status="not-presenting"]) {
+        model-viewer::part(default-ar-button) {
           display: block !important;
         }
       `}</style>
