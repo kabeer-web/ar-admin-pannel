@@ -1,5 +1,9 @@
 import React from 'react';
-import { Box, QrCode, Sparkles, LayoutDashboard, ChevronRight, Leaf, Zap, ShieldCheck } from 'lucide-react';
+import { 
+  Box, QrCode, Sparkles, LayoutDashboard, 
+  ChevronRight, Leaf, Zap, ShieldCheck, 
+  Calculator // Naya Icon
+} from 'lucide-react';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
   return (
@@ -42,6 +46,14 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
           active={activeTab === 'ar'} 
           onClick={() => setActiveTab('ar')} 
         />
+
+        {/* --- NEW: NEURAL CALCULATOR ITEM --- */}
+        <NavItem 
+          icon={<Calculator size={20}/>} 
+          label="Math Processor" 
+          active={activeTab === 'calculator'} 
+          onClick={() => setActiveTab('calculator')} 
+        />
       </nav>
 
       {/* --- FOOTER STATUS --- */}
@@ -52,7 +64,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">System Online</span>
           </div>
           <p className="text-[11px] text-emerald-100/40 font-medium leading-relaxed">
-            All bio-nodes are synchronized with 3D engine.
+            Neural nodes active. All systems nominal.
           </p>
         </div>
 
@@ -77,7 +89,6 @@ const NavItem = ({ icon, label, active, onClick }) => (
         : 'text-emerald-900 hover:text-emerald-100 hover:bg-emerald-950/30'
       }`}
   >
-    {/* Active Indicator Glow */}
     {active && (
         <div className="absolute left-0 top-0 h-full w-1 bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,1)]"></div>
     )}
