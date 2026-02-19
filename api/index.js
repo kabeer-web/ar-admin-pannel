@@ -25,7 +25,7 @@ const ARModel = mongoose.model('ARModel', ARModelSchema);
 
 // --- ROUTES ---
 
-// 1. Get All Models (Admin Dashboard ke liye)
+// 1. Get All Models
 app.get('/api/get-all-models', async (req, res) => {
   try {
     const models = await ARModel.find().sort({ createdAt: -1 });
@@ -33,39 +33,50 @@ app.get('/api/get-all-models', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 2. Save or Update Config
+// 2. SAVE OR UPDATE (The Core Fix)
 app.post('/api/save-config', async (req, res) => {
   try {
     const { id, publicUrl, baseColor, exposure } = req.body;
-    if (id) {
-      // Agar ID hai toh update karo
-      const updated = await ARModel.findByIdAndUpdate(id, { baseColor, exposure }, { new: true });
+
+    // Check agar id exist karti hai to UPDATE karo
+    if (id && id !== "pending") {
+      const updated = await ARModel.findByIdAndUpdate(
+        id,
+        { baseColor, exposure }, // Editing mein sirf ye badalte hain
+        { new: true }
+      );
+      console.log("Updated Model:", id);
       return res.json({ success: true, modelId: updated._id });
-    }
-    // Warna naya banao
+    } 
+    
+    // Warna Naya Banao
     const newModel = new ARModel({
-      modelName: `Neural_${Date.now()}`,
+      modelName: `Project_${Date.now()}`,
       publicUrl,
       baseColor,
       exposure,
       ownerId: "admin_1"
     });
     const saved = await newModel.save();
+    console.log("New Model Created");
     res.json({ success: true, modelId: saved._id });
+
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// 3. Delete Model
+// 3. Delete
 app.delete('/api/delete-model/:id', async (req, res) => {
   await ARModel.findByIdAndDelete(req.params.id);
   res.json({ success: true });
 });
 
-// 4. Get Single Config (AR View ke liye)
+// 4. Single Config for AR View
 app.get('/api/get-config/:id', async (req, res) => {
-  const config = await ARModel.findById(req.params.id);
-  res.json(config);
+  try {
+    const config = await ARModel.findById(req.params.id);
+    res.json(config);
+  } catch (err) { res.status(404).json({ error: "Not found" }); }
 });
 
 const PORT = 5000;
-app.listen(PORT, () => console.log(`Matrix Server Online ⚡`));
+app.listen(PORT, () => console.log(`Server Active ⚡`));
