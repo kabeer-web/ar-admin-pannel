@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { 
   Send, Download, BrainCircuit, FileUp, Database, 
-  Table as TableIcon, Loader2, TrendingUp, AlertCircle 
+  Table as TableIcon, Loader2, TrendingUp, Camera, Image as ImageIcon
 } from 'lucide-react';
 import Groq from "groq-sdk";
 
@@ -13,18 +13,15 @@ const groq = new Groq({
 
 const AiExcelManager = () => {
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "Assalam-o-Alaikum! Beer AI Enterprise active hai. System ab math aur data validation mein 100% accurate hai. Hukum karein?" }
+    { role: 'ai', text: "Assalam-o-Alaikum! Beer AI Vision active hai. Ab aap khatay ki photo phenkein ya handwritten data, main sab set kar doonga!" }
   ]);
   const [excelData, setExcelData] = useState([]);
-  const [fileName, setFileName] = useState("Beer_Professional_Ledger.xlsx");
-  const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Scroll to bottom on new chat
   useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 
-  // 🔥 Smart Calculation: Auto-manages running balance and totals
+  // 🔥 Calculation Engine
   const processedData = useMemo(() => {
     let currentBalance = 0;
     return excelData.map((row) => {
@@ -35,37 +32,52 @@ const AiExcelManager = () => {
     });
   }, [excelData]);
 
-  const handleFileUpload = (e) => {
+  // 📸 Vision Handler: Image se data nikalne ke liye
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setFileName(file.name);
+
+    setIsTyping(true);
+    setMessages(prev => [...prev, { role: 'ai', text: "Bhai, photo scan kar raha hoon, thora sabar..." }]);
+
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onloadend = async () => {
+      const base64Image = reader.result;
+      
       try {
-        const wb = XLSX.read(evt.target.result, { type: 'binary' });
-        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        setExcelData(data);
-        setMessages(prev => [...prev, { role: 'ai', text: `Bhai, ${data.length} records load ho gaye hain. Matrix ready hai.` }]);
+        const response = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Analyze this image. If it's a financial ledger, handwritten accounts, or excel-style data, extract it into a JSON array with keys: Date, Customer Name, Description, Debit, Credit. If it's a random image (car, person, animal, etc.) that isn't a ledger, strictly respond with: 'NOT_A_LEDGER'." },
+                { type: "image_url", image_url: { url: base64Image } }
+              ]
+            }
+          ],
+          model: "llama-3.2-11b-vision-preview",
+        });
+
+        const result = response.choices[0].message.content;
+
+        if (result.includes("NOT_A_LEDGER")) {
+          setMessages(prev => [...prev, { role: 'ai', text: "Bhai, ye kya bhej diya? Main sirf khata entry kar sakta hoon, gariyan ya random photos nahi!" }]);
+        } else {
+          // Extract JSON from AI response
+          const jsonMatch = result.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const newData = JSON.parse(jsonMatch[0]);
+            setExcelData(prev => [...prev, ...newData]);
+            setMessages(prev => [...prev, { role: 'ai', text: "Zabardast! Photo se data nikaal kar table mein charha diya hai. Check kar lo!" }]);
+          }
+        }
       } catch (err) {
-        setMessages(prev => [...prev, { role: 'ai', text: "File read nahi ho rahi. Format check karein." }]);
+        setMessages(prev => [...prev, { role: 'ai', text: "Yaar photo parhne mein masla hua. Dubara kheencho saaf si?" }]);
+      } finally {
+        setIsTyping(false);
       }
     };
-    reader.readAsBinaryString(file);
-  };
-
-  const handleCellEdit = (index, key, value) => {
-    const updated = [...excelData];
-    updated[index][key] = value;
-    setExcelData(updated);
-  };
-
-  const downloadExcel = () => {
-    if (processedData.length === 0) return alert("Pehle data toh daalein!");
-    const ws = XLSX.utils.json_to_sheet(processedData);
-    ws['!cols'] = [{wch: 12}, {wch: 25}, {wch: 30}, {wch: 12}, {wch: 12}, {wch: 15}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "BusinessLedger");
-    XLSX.writeFile(wb, fileName);
+    reader.readAsDataURL(file);
   };
 
   const handleSend = async () => {
@@ -80,18 +92,11 @@ const AiExcelManager = () => {
         messages: [
           {
             role: "system",
-            content: `You are 'Beer AI', a Senior Financial Controller. 
-            Context: Professional Hinglish.
-            Behavior: 
-            - Use input data to perform modifications.
-            - If user says 'update Ali', find Ali and change values.
-            - Format names to UPPERCASE when asked.
-            - ALWAYS return [MESSAGE]: response [DATA]: full JSON array.
-            - Do NOT change the 'Balance' field; the system handles math.`
+            content: "You are 'Beer AI'. Expert Accountant. Return [MESSAGE]: and [DATA]: JSON array. Never change 'Balance' field."
           },
           {
             role: "user",
-            content: `Ledger State: ${JSON.stringify(excelData)}\nTask: ${userQuery}`
+            content: `Data: ${JSON.stringify(excelData)}\nTask: ${userQuery}`
           }
         ],
         model: "llama-3.3-70b-versatile",
@@ -99,32 +104,28 @@ const AiExcelManager = () => {
       });
 
       const raw = chatCompletion.choices[0]?.message?.content || "";
-      const msgMatch = raw.match(/\[MESSAGE\]:(.*?)(\[DATA\]|$)/s);
       const dataMatch = raw.match(/\[DATA\]:(\s*\[[\s\S]*\])/);
+      const msgMatch = raw.match(/\[MESSAGE\]:(.*?)(\[DATA\]|$)/s);
 
       if (dataMatch) {
         setExcelData(JSON.parse(dataMatch[1].trim()));
-        setMessages(prev => [...prev, { role: 'ai', text: msgMatch ? msgMatch[1].trim() : "Kaam mukammal hai bhai!" }]);
+        setMessages(prev => [...prev, { role: 'ai', text: msgMatch ? msgMatch[1].trim() : "Update ho gaya!" }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', text: "System overload! Zara asaan alfaaz mein bolna?" }]);
+      setMessages(prev => [...prev, { role: 'ai', text: "Bhai dimaag ghoom gaya, phir se bolo?" }]);
     } finally {
       setIsTyping(false);
     }
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-[#010302] p-4 gap-6 text-zinc-200 font-sans overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen bg-[#010302] p-4 gap-6 text-zinc-200 overflow-hidden font-sans">
       
-      {/* 🟢 Professional Chat Sidebar */}
+      {/* 🟢 Sidebar: AI Chat */}
       <div className="w-full lg:w-80 flex flex-col bg-[#0b0f0e] rounded-[2rem] border border-emerald-500/10 shadow-2xl">
-        <div className="p-6 border-b border-emerald-500/5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <BrainCircuit className="text-emerald-400" size={20} />
-            </div>
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-400">Beer AI Core</span>
-          </div>
+        <div className="p-6 border-b border-emerald-500/5 flex items-center gap-2">
+          <BrainCircuit className="text-emerald-400" size={20} />
+          <span className="text-xs font-black uppercase tracking-widest text-emerald-400">Beer AI Vision</span>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -141,85 +142,79 @@ const AiExcelManager = () => {
           <div ref={chatEndRef} />
         </div>
 
-        <div className="p-4">
-          <div className="flex gap-2 bg-[#020403] p-1.5 rounded-xl border border-emerald-500/20 focus-within:border-emerald-500 transition-all">
+        <div className="p-4 bg-black/20 flex flex-col gap-2">
+          <div className="flex gap-2">
             <input 
-              className="flex-1 bg-transparent border-none outline-none px-3 text-xs"
+              className="flex-1 bg-[#020403] border border-emerald-500/20 rounded-xl px-3 text-xs outline-none focus:border-emerald-500"
               placeholder="Command do..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             />
-            <button onClick={handleSend} className="bg-emerald-500 p-2.5 rounded-lg text-black hover:scale-95 transition-transform">
+            <button onClick={handleSend} className="bg-emerald-500 p-2.5 rounded-xl text-black">
               <Send size={14} />
             </button>
           </div>
+          
+          {/* Photo Upload Button */}
+          <label className="flex items-center justify-center gap-2 cursor-pointer bg-white/5 border border-dashed border-emerald-500/30 p-2 rounded-xl text-[10px] hover:bg-emerald-500/10 transition-all uppercase font-bold text-emerald-400">
+            <Camera size={14} /> Scan Hand-written/Image
+            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+          </label>
         </div>
       </div>
 
-      {/* 🔵 Enterprise Data Matrix */}
-      <div className="flex-1 flex flex-col bg-[#0b0f0e] rounded-[2.5rem] border border-emerald-500/10 shadow-2xl overflow-hidden">
-        <div className="p-6 border-b border-emerald-500/5 flex justify-between items-center bg-emerald-500/[0.02]">
+      {/* 🔵 Data Matrix */}
+      <div className="flex-1 flex flex-col bg-[#0b0f0e] rounded-[2.5rem] border border-emerald-500/10 overflow-hidden shadow-2xl">
+        <div className="p-6 flex justify-between items-center bg-emerald-500/[0.02] border-b border-emerald-500/5">
           <div className="flex items-center gap-4">
-            <TrendingUp className="text-emerald-500" size={24} />
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-widest">Financial Ledger</h2>
-              <p className="text-[10px] text-emerald-700 font-bold uppercase">Live Audit Enabled</p>
-            </div>
+            <div className="p-2 bg-emerald-500/10 rounded-lg"><TableIcon className="text-emerald-500" size={20} /></div>
+            <h2 className="text-sm font-black uppercase tracking-widest">Financial Matrix</h2>
           </div>
-          <div className="flex gap-3">
-            <label className="flex items-center gap-2 cursor-pointer bg-transparent border border-emerald-500/20 px-4 py-2 rounded-xl text-[10px] font-black uppercase text-emerald-400 hover:bg-emerald-500/5">
-              <FileUp size={14} /> Import
-              <input type="file" className="hidden" onChange={handleFileUpload} />
-            </label>
-            <button onClick={downloadExcel} className="bg-emerald-500 text-black px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg hover:shadow-emerald-500/20 transition-all">
-              Export Audit
-            </button>
-          </div>
+          <button onClick={() => {
+             const ws = XLSX.utils.json_to_sheet(processedData);
+             const wb = XLSX.utils.book_new();
+             XLSX.utils.book_append_sheet(wb, ws, "Ledger");
+             XLSX.writeFile(wb, "Beer_Ledger.xlsx");
+          }} className="bg-emerald-500 text-black px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">
+            Export Audit
+          </button>
         </div>
 
         <div className="flex-1 overflow-auto p-6 custom-scrollbar">
           {processedData.length > 0 ? (
-            <div className="rounded-2xl border border-emerald-500/5 overflow-hidden shadow-inner">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-[#121816] text-emerald-400 font-black uppercase text-[10px] tracking-widest">
-                    <th className="p-4 text-left">Date</th>
-                    <th className="p-4 text-left">Customer</th>
-                    <th className="p-4 text-left">Description</th>
-                    <th className="p-4 text-right">Debit (-)</th>
-                    <th className="p-4 text-right">Credit (+)</th>
-                    <th className="p-4 text-right bg-emerald-500/5">Balance</th>
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-[#121816] text-emerald-400 font-black uppercase text-[10px] tracking-widest">
+                  <th className="p-4 text-left">Date</th>
+                  <th className="p-4 text-left">Customer</th>
+                  <th className="p-4 text-left">Description</th>
+                  <th className="p-4 text-right">Debit</th>
+                  <th className="p-4 text-right">Credit</th>
+                  <th className="p-4 text-right bg-emerald-500/5">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-emerald-500/5">
+                {processedData.map((row, i) => (
+                  <tr key={i} className="hover:bg-emerald-500/[0.02] text-[11px]">
+                    <td className="p-2 px-4 opacity-40">{row.Date || '-'}</td>
+                    <td className="p-2 px-4 font-bold text-white">{row["Customer Name"] || '-'}</td>
+                    <td className="p-2 px-4 opacity-60">{row.Description || '-'}</td>
+                    <td className="p-2 px-4 text-right text-red-400">{row.Debit || 0}</td>
+                    <td className="p-2 px-4 text-right text-emerald-400">{row.Credit || 0}</td>
+                    <td className="p-4 text-right font-black text-white bg-emerald-500/[0.03]">{row.Balance.toLocaleString()}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-emerald-500/5">
-                  {processedData.map((row, i) => (
-                    <tr key={i} className="hover:bg-emerald-500/[0.02] transition-colors group text-[11px]">
-                      <td className="p-2 px-4 opacity-40"><input className="bg-transparent outline-none w-full" value={row.Date || ''} onChange={(e) => handleCellEdit(i, 'Date', e.target.value)} /></td>
-                      <td className="p-2 px-4 font-bold"><input className="bg-transparent outline-none w-full text-white" value={row["Customer Name"] || ''} onChange={(e) => handleCellEdit(i, 'Customer Name', e.target.value)} /></td>
-                      <td className="p-2 px-4 opacity-60"><input className="bg-transparent outline-none w-full" value={row.Description || ''} onChange={(e) => handleCellEdit(i, 'Description', e.target.value)} /></td>
-                      <td className="p-2 px-4 text-right text-red-400 font-mono font-bold"><input className="bg-transparent outline-none w-full text-right" value={row.Debit || 0} onChange={(e) => handleCellEdit(i, 'Debit', e.target.value)} /></td>
-                      <td className="p-2 px-4 text-right text-emerald-400 font-mono font-bold"><input className="bg-transparent outline-none w-full text-right" value={row.Credit || 0} onChange={(e) => handleCellEdit(i, 'Credit', e.target.value)} /></td>
-                      <td className="p-4 text-right font-mono font-black text-white bg-emerald-500/[0.03]">{row.Balance.toLocaleString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           ) : (
             <div className="h-full flex flex-col items-center justify-center opacity-10">
-              <Database size={80} className="mb-4" />
-              <p className="text-xs font-black uppercase tracking-[1em]">Matrix Offline</p>
+              <ImageIcon size={60} className="mb-2" />
+              <p className="text-[10px] font-black uppercase tracking-[0.5em]">Upload image or file to start</p>
             </div>
           )}
         </div>
       </div>
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 3px; height: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #10b98133; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #10b98166; }
-      `}</style>
     </div>
   );
 };
