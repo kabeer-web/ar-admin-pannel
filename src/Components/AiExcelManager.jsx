@@ -10,41 +10,38 @@ const groq = new Groq({
 
 const AiExcelManager = () => {
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "Assalam-o-Alaikum bhai! Beer AI hazir hai. Excel download fix kar di hai aur scrollbar bhi makkhan hai. Batao kya hukum hai?" }
+    { role: 'ai', text: "Assalam-o-Alaikum bhai! Beer AI ab 'Corporate Mode' mein hai. Excel file ab gic-mich nahi, balkay bilkul saaf suthri download hogi. Check karo!" }
   ]);
   const [excelData, setExcelData] = useState([]);
-  const [fileName, setFileName] = useState("Beer_Ledger.xlsx");
+  const [fileName, setFileName] = useState("Corporate_Ledger.xlsx");
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
 
   useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 
-  const handleCellEdit = (rowIndex, columnKey, value) => {
-    const newData = [...excelData];
-    newData[rowIndex][columnKey] = value;
-    setExcelData(newData);
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, { type: 'binary' }).Sheets[XLSX.read(evt.target.result, { type: 'binary' }).SheetNames[0]]);
-      setExcelData(data);
-      setMessages(prev => [...prev, { role: 'ai', text: `Bhai file mil gayi! Isme ${data.length} entries hain. Beer AI ready hai!` }]);
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  // 🔥 FIXED DOWNLOAD FUNCTION
+  // 🔥 PRO EXPORT LOGIC (Clean & Structured)
   const downloadExcel = () => {
-    if (excelData.length === 0) return alert("Bhai pehle data toh daalo!");
+    if (excelData.length === 0) return alert("Bhai data toh daalo pehle!");
+    
+    // Create worksheet
     const ws = XLSX.utils.json_to_sheet(excelData);
+    
+    // Professional Column Widths
+    const wscols = [
+      {wch: 15}, // Date
+      {wch: 25}, // Customer Name
+      {wch: 12}, // Bill No
+      {wch: 15}, // Credit
+      {wch: 15}, // Debit
+      {wch: 18}, // Balance
+    ];
+    ws['!cols'] = wscols;
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Ledger");
+    XLSX.utils.book_append_sheet(wb, ws, "Business_Ledger");
+    
+    // Download
     XLSX.writeFile(wb, fileName);
   };
 
@@ -60,19 +57,18 @@ const AiExcelManager = () => {
         messages: [
           {
             role: "system",
-            content: `You are 'Beer AI', a friendly Hinglish Accountant. 
-            Rules:
-            1. Respond in Hinglish like a partner.
-            2. ALWAYS return [MESSAGE]: your talk and [DATA]: the full JSON array.
-            3. Ensure 'Balance' is auto-calculated correctly.`
+            content: `You are 'Beer AI'. Expert Accountant. 
+            Response: Hinglish. 
+            Format: [MESSAGE]: friendly talk [DATA]: JSON array. 
+            Default Behavior: Create clean, professional headers and maintain logical flow.`
           },
           {
             role: "user",
-            content: `Current Ledger: ${JSON.stringify(excelData)}\nAction: ${userQuery}`
+            content: `Current Ledger: ${JSON.stringify(excelData)}\nCommand: ${userQuery}`
           }
         ],
         model: "llama-3.3-70b-versatile",
-        temperature: 0.6,
+        temperature: 0.5,
       });
 
       let rawResponse = chatCompletion.choices[0]?.message?.content || "";
@@ -81,108 +77,117 @@ const AiExcelManager = () => {
 
       if (dataMatch) {
         setExcelData(JSON.parse(dataMatch[1].trim()));
-        setMessages(prev => [...prev, { role: 'ai', text: messageMatch ? messageMatch[1].trim() : "Bhai kaam done hai!" }]);
+        setMessages(prev => [...prev, { role: 'ai', text: messageMatch ? messageMatch[1].trim() : "Bhai dhanda update kar diya hai!" }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', text: "Yaar bhai, dimaag thora ghoom gaya. Dobara bolna?" }]);
+      setMessages(prev => [...prev, { role: 'ai', text: "Yaar bhai, parsing mein kachra ho gaya. Dobara bolna?" }]);
     } finally {
       setIsTyping(false);
     }
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-[#050706] p-4 gap-4 overflow-hidden text-white">
+    <div className="flex flex-col lg:flex-row h-screen bg-[#020403] p-4 gap-6 overflow-hidden text-zinc-100 font-sans">
       
-      {/* Sidebar - Beer AI Chat with Custom Scrollbar */}
-      <div className="w-full lg:w-1/4 flex flex-col bg-[#111814] rounded-[2rem] border border-emerald-500/20 shadow-2xl overflow-hidden">
-        <div className="p-5 border-b border-emerald-500/10 flex items-center justify-between bg-emerald-500/5">
-          <div className="flex items-center gap-2">
-            <BrainCircuit className="text-emerald-400" size={24} />
-            <span className="text-sm font-black uppercase tracking-widest text-emerald-400">Beer AI</span>
-          </div>
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+      {/* 🟢 Sidebar: Beer AI Chat */}
+      <div className="w-full lg:w-1/4 flex flex-col bg-[#0d1110] rounded-[2rem] border border-emerald-500/10 shadow-2xl relative overflow-hidden">
+        <div className="p-6 border-b border-emerald-500/5 bg-emerald-500/5 flex items-center gap-3">
+          <BrainCircuit className="text-emerald-400" size={24} />
+          <h2 className="text-sm font-black uppercase tracking-[0.2em] text-emerald-400">Beer AI</h2>
         </div>
+
+        {/* Custom Scrollbar CSS Injected */}
+        <style>{`
+          .custom-scroll::-webkit-scrollbar { width: 4px; }
+          .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+          .custom-scroll::-webkit-scrollbar-thumb { background: #10b98133; border-radius: 10px; }
+          .custom-scroll:hover::-webkit-scrollbar-thumb { background: #10b98166; }
+        `}</style>
         
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-emerald-500/20 hover:scrollbar-thumb-emerald-500/50 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scroll scroll-smooth">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-4 rounded-2xl max-w-[90%] text-[13px] shadow-lg transition-all ${
-                msg.role === 'user' ? 'bg-emerald-600 shadow-emerald-900/20' : 'bg-[#1a241f] border border-emerald-500/10 text-emerald-50'
+              <div className={`p-4 rounded-2xl max-w-[85%] text-[13px] leading-relaxed transition-all shadow-md ${
+                msg.role === 'user' ? 'bg-emerald-600 text-white shadow-emerald-900/40' : 'bg-[#161d1a] border border-emerald-500/10'
               }`}>
                 {msg.text}
               </div>
             </div>
           ))}
-          {isTyping && <Loader2 className="animate-spin text-emerald-500 mx-auto" size={20} />}
           <div ref={chatEndRef} />
         </div>
 
-        <div className="p-4 bg-black/40 border-t border-emerald-500/10">
-          <div className="flex gap-2 bg-[#050706] p-2 rounded-xl border border-emerald-500/30 focus-within:border-emerald-400 transition-all">
+        <div className="p-5 bg-black/20">
+          <div className="flex gap-2 bg-[#020403] p-2 rounded-2xl border border-emerald-500/20 focus-within:border-emerald-500 transition-all">
             <input 
-              className="flex-1 bg-transparent border-none outline-none px-2 text-sm text-white"
-              placeholder="Beer AI se baat karo..."
+              className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-emerald-50 placeholder-emerald-900/50"
+              placeholder="Beer AI se gup-shup..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             />
-            <button onClick={handleSend} className="bg-emerald-500 p-2.5 rounded-lg text-black hover:bg-white active:scale-95 transition-all">
-              <Send size={18} />
+            <button onClick={handleSend} className="bg-emerald-500 p-3 rounded-xl text-black hover:bg-emerald-400 active:scale-90 transition-all shadow-lg">
+              <Send size={16} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Ledger Grid with Custom Scrollbar */}
-      <div className="w-full lg:w-3/4 flex flex-col bg-[#111814] rounded-[2rem] border border-emerald-500/20 overflow-hidden shadow-2xl">
-        <div className="p-5 border-b border-emerald-500/10 flex justify-between items-center bg-black/20">
-          <div className="flex items-center gap-3">
-            <TableIcon className="text-emerald-400" size={22} />
-            <h2 className="text-xs font-black uppercase tracking-widest text-emerald-100/50">Business Matrix</h2>
+      {/* 🔵 Main Interface: Corporate Grid */}
+      <div className="w-full lg:w-3/4 flex flex-col bg-[#0d1110] rounded-[2.5rem] border border-emerald-500/10 shadow-2xl overflow-hidden">
+        <div className="p-7 border-b border-emerald-500/5 flex justify-between items-center bg-black/10 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-500/10 rounded-2xl"><TableIcon className="text-emerald-400" size={24} /></div>
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-widest">Financial Matrix</h2>
+              <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-tighter">Enterprise Standard</p>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <label className="flex items-center gap-2 cursor-pointer bg-[#1a241f] px-4 py-2 rounded-xl border border-emerald-500/20 hover:bg-emerald-500 hover:text-black transition-all text-xs font-bold uppercase">
-              <FileUp size={16} /> Load
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer bg-transparent border border-emerald-500/20 px-5 py-2.5 rounded-2xl hover:bg-emerald-500/10 transition-all text-xs font-bold uppercase tracking-widest text-emerald-400">
+              <FileUp size={18} /> Ingest
               <input type="file" className="hidden" onChange={handleFileUpload} />
             </label>
-            <button onClick={downloadExcel} className="bg-emerald-500 text-black px-6 py-2 rounded-xl font-black text-xs uppercase hover:bg-white active:scale-95 transition-all shadow-lg flex items-center gap-2">
-              <Download size={16} /> Export
+            <button onClick={downloadExcel} className="bg-emerald-500 text-black px-8 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-white transition-all shadow-[0_10px_30px_-10px_rgba(16,185,129,0.5)]">
+              Export File
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 bg-[#0a0f0d] scrollbar-thin scrollbar-thumb-emerald-500/20 hover:scrollbar-thumb-emerald-500/40 scrollbar-track-transparent">
+        <div className="flex-1 overflow-auto p-6 bg-[#050706] custom-scroll">
           {excelData.length > 0 ? (
-            <div className="rounded-2xl border border-emerald-500/10 overflow-hidden">
+            <div className="border border-emerald-500/10 rounded-[1.5rem] overflow-hidden bg-[#0d1110] shadow-2xl">
               <table className="w-full border-collapse text-sm">
-                <thead className="sticky top-0 z-10">
-                  <tr className="bg-emerald-600 text-black font-black uppercase text-[11px]">
-                    <th className="p-4 text-left">Date</th>
-                    <th className="p-4 text-left">Customer Name</th>
-                    <th className="p-4 text-center">Bill No</th>
-                    <th className="p-4 text-right">Credit (+)</th>
-                    <th className="p-4 text-right">Debit (-)</th>
-                    <th className="p-4 text-right bg-emerald-700">Balance</th>
+                <thead>
+                  <tr className="bg-[#161d1a] text-emerald-400 font-black uppercase text-[10px] tracking-[0.2em]">
+                    <th className="p-5 text-left border-b border-emerald-500/5">Date</th>
+                    <th className="p-5 text-left border-b border-emerald-500/5">Customer Name</th>
+                    <th className="p-5 text-center border-b border-emerald-500/5">Bill No</th>
+                    <th className="p-5 text-right border-b border-emerald-500/5">Credit</th>
+                    <th className="p-5 text-right border-b border-emerald-500/5">Debit</th>
+                    <th className="p-5 text-right border-b border-emerald-500/5 bg-emerald-500/5">Balance</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-emerald-500/5 bg-[#111814]">
+                <tbody className="divide-y divide-emerald-500/5">
                   {excelData.map((row, i) => (
-                    <tr key={i} className="hover:bg-emerald-500/5 transition-all">
-                      <td className="p-1"><input className="w-full p-3 bg-transparent outline-none text-emerald-100/60" value={row["Date"] || ""} onChange={(e) => handleCellEdit(i, "Date", e.target.value)} /></td>
-                      <td className="p-1"><input className="w-full p-3 bg-transparent outline-none font-bold text-white" value={row["Customer Name"] || ""} onChange={(e) => handleCellEdit(i, "Customer Name", e.target.value)} /></td>
-                      <td className="p-1"><input className="w-full p-3 bg-transparent outline-none text-center opacity-40 font-mono" value={row["Bill No"] || ""} onChange={(e) => handleCellEdit(i, "Bill No", e.target.value)} /></td>
-                      <td className="p-1"><input className="w-full p-3 bg-transparent outline-none text-right font-black text-emerald-400" value={row["Credit"] || 0} onChange={(e) => handleCellEdit(i, "Credit", e.target.value)} /></td>
-                      <td className="p-1"><input className="w-full p-3 bg-transparent outline-none text-right font-black text-red-400" value={row["Debit"] || 0} onChange={(e) => handleCellEdit(i, "Debit", e.target.value)} /></td>
-                      <td className="p-4 text-right font-black text-white bg-emerald-500/5">{row["Balance"] || 0}</td>
+                    <tr key={i} className="hover:bg-emerald-500/5 transition-colors group">
+                      <td className="p-2 px-5"><input className="bg-transparent outline-none w-full text-emerald-100/50" value={row["Date"] || ""} onChange={(e) => handleCellEdit(i, "Date", e.target.value)} /></td>
+                      <td className="p-2 px-5 font-bold"><input className="bg-transparent outline-none w-full text-white" value={row["Customer Name"] || ""} onChange={(e) => handleCellEdit(i, "Customer Name", e.target.value)} /></td>
+                      <td className="p-2 px-5 text-center opacity-30 font-mono"><input className="bg-transparent outline-none w-full text-center" value={row["Bill No"] || ""} onChange={(e) => handleCellEdit(i, "Bill No", e.target.value)} /></td>
+                      <td className="p-2 px-5 text-right font-black text-emerald-400"><input className="bg-transparent outline-none w-full text-right" value={row["Credit"] || 0} onChange={(e) => handleCellEdit(i, "Credit", e.target.value)} /></td>
+                      <td className="p-2 px-5 text-right font-black text-red-400"><input className="bg-transparent outline-none w-full text-right" value={row["Debit"] || 0} onChange={(e) => handleCellEdit(i, "Debit", e.target.value)} /></td>
+                      <td className="p-5 text-right font-black text-white bg-emerald-500/[0.02]">{row["Balance"] || 0}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center opacity-20">
-              <Database size={60} className="text-emerald-500 mb-4 animate-pulse" />
-              <p className="font-black uppercase tracking-[0.5em]">Beer AI Matrix Empty</p>
+            <div className="h-full flex flex-col items-center justify-center space-y-6 opacity-20">
+              <div className="p-10 border-2 border-dashed border-emerald-500/20 rounded-[3rem]">
+                <Database size={80} className="text-emerald-500" />
+              </div>
+              <p className="font-black uppercase tracking-[0.5em] text-sm">Waiting for Matrix Command</p>
             </div>
           )}
         </div>
