@@ -10,17 +10,23 @@ const groq = new Groq({
 
 const AiExcelManager = () => {
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "Beer AI Online! Bhai, screen white nahi hogi ab, handleFileUpload fix kar diya hai. File phenko ya command do!" }
+    { role: 'ai', text: "Beer AI v4.2 Active! Bhai Ali Ahmed ka naam Capital kar diya aur Bilal ka 5000 charha diya hai. Math ab bilkul perfect hai." }
   ]);
-  const [excelData, setExcelData] = useState([]);
-  const [fileName, setFileName] = useState("Beer_Ledger.xlsx");
+  const [excelData, setExcelData] = useState([
+    { "Date": "46023", "Customer Name": "Fraaz Industry", "Description": "Opening Balance", "Debit": 0, "Credit": 0, "Balance": 10000 },
+    { "Date": "46143", "Customer Name": "ALI AHMED", "Description": "Goods Purchase", "Debit": 2000, "Credit": 0, "Balance": 8000 },
+    { "Date": "46296", "Customer Name": "Fraaz Industry", "Description": "Payment Received", "Debit": 0, "Credit": 5000, "Balance": 13000 },
+    { "Date": "15/01/2026", "Customer Name": "Khan & Sons", "Description": "Service Charges", "Debit": 1500, "Credit": 0, "Balance": 11500 },
+    { "Date": "20/01/2026", "Customer Name": "ALI AHMED", "Description": "Cash Deposit", "Debit": 0, "Credit": 3000, "Balance": 14500 },
+    { "Date": "22/02/2026", "Customer Name": "Bilal Garments", "Description": "Credit Entry", "Debit": 0, "Credit": 10000, "Balance": 24500 }
+  ]);
+  const [fileName, setFileName] = useState("Beer_Business_Ledger.xlsx");
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
 
   useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 
-  // ✅ FIX: Missing handleFileUpload Function added back
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -28,15 +34,12 @@ const AiExcelManager = () => {
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws);
+        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
         setExcelData(data);
-        setMessages(prev => [...prev, { role: 'ai', text: `Bhai file load ho gayi! ${data.length} entries mili hain. Beer AI ready hai.` }]);
+        setMessages(prev => [...prev, { role: 'ai', text: "Bhai file load ho gayi! Beer AI ne data matrix set kar diya hai." }]);
       } catch (err) {
-        setMessages(prev => [...prev, { role: 'ai', text: "Bhai file read karne mein masla aa raha hai, format check karo." }]);
+        setMessages(prev => [...prev, { role: 'ai', text: "Bhai file read nahi hui. Format check karo?" }]);
       }
     };
     reader.readAsBinaryString(file);
@@ -49,12 +52,11 @@ const AiExcelManager = () => {
   };
 
   const downloadExcel = () => {
-    if (excelData.length === 0) return alert("Bhai data toh daalo!");
+    if (excelData.length === 0) return alert("Bhai pehle data toh dalo!");
     const ws = XLSX.utils.json_to_sheet(excelData);
-    // Professional column widths
-    ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 12}, {wch: 15}, {wch: 15}, {wch: 18}];
+    ws['!cols'] = [{wch: 15}, {wch: 25}, {wch: 25}, {wch: 12}, {wch: 12}, {wch: 15}];
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Business_Ledger");
+    XLSX.utils.book_append_sheet(wb, ws, "Ledger");
     XLSX.writeFile(wb, fileName);
   };
 
@@ -70,15 +72,20 @@ const AiExcelManager = () => {
         messages: [
           {
             role: "system",
-            content: "You are 'Beer AI'. Expert Accountant. Response: Hinglish. Format: [MESSAGE]: friendly talk [DATA]: JSON array."
+            content: `You are 'Beer AI'. Expert Accountant. 
+            Response Style: Hinglish (Urdu/Hindi in English script). 
+            Task: Handle the ledger data precisely. 
+            - Always return [MESSAGE]: and [DATA]: JSON array.
+            - Keep Customer Names in UPPERCASE if requested.
+            - Ensure math: Balance = Previous Balance + Credit - Debit.`
           },
           {
             role: "user",
-            content: `Current Ledger: ${JSON.stringify(excelData)}\nCommand: ${userQuery}`
+            content: `Current Data: ${JSON.stringify(excelData)}\nCommand: ${userQuery}`
           }
         ],
         model: "llama-3.3-70b-versatile",
-        temperature: 0.5,
+        temperature: 0.3, // Accuracy ke liye temperature low rakha hai
       });
 
       let rawResponse = chatCompletion.choices[0]?.message?.content || "";
@@ -87,10 +94,10 @@ const AiExcelManager = () => {
 
       if (dataMatch) {
         setExcelData(JSON.parse(dataMatch[1].trim()));
-        setMessages(prev => [...prev, { role: 'ai', text: messageMatch ? messageMatch[1].trim() : "Bhai kaam ho gaya!" }]);
+        setMessages(prev => [...prev, { role: 'ai', text: messageMatch ? messageMatch[1].trim() : "Bhai, dhanda update ho gaya hai!" }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', text: "Yaar bhai, kuch locha hua hai. Dobara try karein?" }]);
+      setMessages(prev => [...prev, { role: 'ai', text: "Yaar bhai, dimaag ghoom gaya. Dobara bolna?" }]);
     } finally {
       setIsTyping(false);
     }
@@ -98,8 +105,9 @@ const AiExcelManager = () => {
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-[#020403] p-4 gap-6 overflow-hidden text-zinc-100">
-      {/* Sidebar: Beer AI Chat */}
-      <div className="w-full lg:w-1/4 flex flex-col bg-[#0d1110] rounded-[2rem] border border-emerald-500/10 shadow-2xl relative overflow-hidden">
+      
+      {/* 🟢 Sidebar: Beer AI Chat */}
+      <div className="w-full lg:w-1/4 flex flex-col bg-[#0d1110] rounded-[2rem] border border-emerald-500/10 shadow-2xl overflow-hidden">
         <div className="p-6 border-b border-emerald-500/5 bg-emerald-500/5 flex items-center gap-3">
           <BrainCircuit className="text-emerald-400" size={24} />
           <h2 className="text-sm font-black uppercase tracking-[0.2em] text-emerald-400">Beer AI</h2>
@@ -107,7 +115,6 @@ const AiExcelManager = () => {
 
         <style>{`
           .custom-scroll::-webkit-scrollbar { width: 4px; }
-          .custom-scroll::-webkit-scrollbar-track { background: transparent; }
           .custom-scroll::-webkit-scrollbar-thumb { background: #10b98133; border-radius: 10px; }
           .custom-scroll:hover::-webkit-scrollbar-thumb { background: #10b98166; }
         `}</style>
@@ -115,8 +122,8 @@ const AiExcelManager = () => {
         <div className="flex-1 overflow-y-auto p-5 space-y-5 custom-scroll scroll-smooth">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-4 rounded-2xl max-w-[85%] text-[13px] leading-relaxed transition-all shadow-md ${
-                msg.role === 'user' ? 'bg-emerald-600 text-white shadow-emerald-900/40' : 'bg-[#161d1a] border border-emerald-500/10'
+              <div className={`p-4 rounded-2xl max-w-[85%] text-[13px] leading-relaxed shadow-md ${
+                msg.role === 'user' ? 'bg-emerald-600' : 'bg-[#161d1a] border border-emerald-500/10'
               }`}>
                 {msg.text}
               </div>
@@ -126,9 +133,9 @@ const AiExcelManager = () => {
         </div>
 
         <div className="p-5 bg-black/20">
-          <div className="flex gap-2 bg-[#020403] p-2 rounded-2xl border border-emerald-500/20 focus-within:border-emerald-500">
+          <div className="flex gap-2 bg-[#020403] p-2 rounded-2xl border border-emerald-500/20 focus-within:border-emerald-500 transition-all">
             <input 
-              className="flex-1 bg-transparent border-none outline-none px-3 text-sm text-emerald-50"
+              className="flex-1 bg-transparent border-none outline-none px-3 text-sm"
               placeholder="Beer AI se baat..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -141,15 +148,18 @@ const AiExcelManager = () => {
         </div>
       </div>
 
-      {/* Main Grid */}
+      {/* 🔵 Main Interface: Corporate Grid */}
       <div className="w-full lg:w-3/4 flex flex-col bg-[#0d1110] rounded-[2.5rem] border border-emerald-500/10 shadow-2xl overflow-hidden">
         <div className="p-7 border-b border-emerald-500/5 flex justify-between items-center bg-black/10">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-emerald-500/10 rounded-2xl"><TableIcon className="text-emerald-400" size={24} /></div>
-            <h2 className="text-sm font-black text-white uppercase tracking-widest">Financial Matrix</h2>
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-widest">Financial Matrix</h2>
+              <p className="text-[10px] text-emerald-700 font-bold uppercase tracking-tighter">Enterprise Standard</p>
+            </div>
           </div>
           <div className="flex gap-4">
-            <label className="flex items-center gap-2 cursor-pointer border border-emerald-500/20 px-5 py-2.5 rounded-2xl hover:bg-emerald-500/10 transition-all text-xs font-bold uppercase text-emerald-400">
+            <label className="flex items-center gap-2 cursor-pointer border border-emerald-500/20 px-5 py-2.5 rounded-2xl text-xs font-bold uppercase text-emerald-400">
               <FileUp size={18} /> Ingest
               <input type="file" className="hidden" onChange={handleFileUpload} />
             </label>
@@ -167,9 +177,9 @@ const AiExcelManager = () => {
                   <tr className="bg-[#161d1a] text-emerald-400 font-black uppercase text-[10px] tracking-[0.2em]">
                     <th className="p-5 text-left border-b border-emerald-500/5">Date</th>
                     <th className="p-5 text-left border-b border-emerald-500/5">Customer Name</th>
-                    <th className="p-5 text-center border-b border-emerald-500/5">Bill No</th>
-                    <th className="p-5 text-right border-b border-emerald-500/5">Credit</th>
+                    <th className="p-5 text-left border-b border-emerald-500/5">Description</th>
                     <th className="p-5 text-right border-b border-emerald-500/5">Debit</th>
+                    <th className="p-5 text-right border-b border-emerald-500/5">Credit</th>
                     <th className="p-5 text-right border-b border-emerald-500/5 bg-emerald-500/5">Balance</th>
                   </tr>
                 </thead>
@@ -177,10 +187,10 @@ const AiExcelManager = () => {
                   {excelData.map((row, i) => (
                     <tr key={i} className="hover:bg-emerald-500/5 transition-colors">
                       <td className="p-2 px-5"><input className="bg-transparent outline-none w-full text-emerald-100/50" value={row["Date"] || ""} onChange={(e) => handleCellEdit(i, "Date", e.target.value)} /></td>
-                      <td className="p-2 px-5 font-bold"><input className="bg-transparent outline-none w-full text-white" value={row["Customer Name"] || ""} onChange={(e) => handleCellEdit(i, "Customer Name", e.target.value)} /></td>
-                      <td className="p-2 px-5 text-center opacity-30 font-mono"><input className="bg-transparent outline-none w-full text-center" value={row["Bill No"] || ""} onChange={(e) => handleCellEdit(i, "Bill No", e.target.value)} /></td>
-                      <td className="p-2 px-5 text-right font-black text-emerald-400"><input className="bg-transparent outline-none w-full text-right" value={row["Credit"] || 0} onChange={(e) => handleCellEdit(i, "Credit", e.target.value)} /></td>
+                      <td className="p-2 px-5 font-bold"><input className="bg-transparent outline-none w-full text-white uppercase" value={row["Customer Name"] || ""} onChange={(e) => handleCellEdit(i, "Customer Name", e.target.value)} /></td>
+                      <td className="p-2 px-5 opacity-50"><input className="bg-transparent outline-none w-full" value={row["Description"] || ""} onChange={(e) => handleCellEdit(i, "Description", e.target.value)} /></td>
                       <td className="p-2 px-5 text-right font-black text-red-400"><input className="bg-transparent outline-none w-full text-right" value={row["Debit"] || 0} onChange={(e) => handleCellEdit(i, "Debit", e.target.value)} /></td>
+                      <td className="p-2 px-5 text-right font-black text-emerald-400"><input className="bg-transparent outline-none w-full text-right" value={row["Credit"] || 0} onChange={(e) => handleCellEdit(i, "Credit", e.target.value)} /></td>
                       <td className="p-5 text-right font-black text-white bg-emerald-500/[0.02]">{row["Balance"] || 0}</td>
                     </tr>
                   ))}
@@ -188,9 +198,9 @@ const AiExcelManager = () => {
               </table>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center space-y-6 opacity-20">
+            <div className="h-full flex flex-col items-center justify-center opacity-20">
               <Database size={80} className="text-emerald-500" />
-              <p className="font-black uppercase tracking-[0.5em] text-sm">Waiting for Matrix Command</p>
+              <p className="font-black uppercase tracking-[0.5em] text-sm text-white">Waiting for Matrix Command</p>
             </div>
           )}
         </div>
