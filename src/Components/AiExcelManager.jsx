@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Send, Download, BrainCircuit, FileUp, Database, Table as TableIcon, Loader2 } from 'lucide-react';
+import { Send, Download, BrainCircuit, FileUp, Database, Table as TableIcon, Loader2, Palette } from 'lucide-react';
 import Groq from "groq-sdk";
 
 const groq = new Groq({ 
@@ -10,18 +10,26 @@ const groq = new Groq({
 
 const AiExcelManager = () => {
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "Neural Matrix Online. I'm ready to manage your data with infinite persistence. Upload or command me to start." }
+    { role: 'ai', text: "Design Engine Online. I can now modify the grid's appearance, colors, and format. Command me to 'Change theme to Neon' or 'Highlight negative balances'." }
   ]);
   const [excelData, setExcelData] = useState([]);
   const [fileName, setFileName] = useState("AI_Ledger.xlsx");
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false); // For visual flash effect
-  const chatEndRef = useRef(null);
+  
+  // --- New Styling States ---
+  const [gridStyle, setGridStyle] = useState({
+    primaryColor: '#10b981', // Emerald 500
+    bgColor: '#080f0c',
+    textColor: '#f0fdf4',
+    fontSize: '12px',
+    rowPadding: '12px',
+    borderRadius: '2.5rem'
+  });
 
+  const chatEndRef = useRef(null);
   useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 
-  // Manual Edit with change detection
   const handleCellEdit = (rowIndex, columnKey, value) => {
     const newData = [...excelData];
     newData[rowIndex][columnKey] = value;
@@ -34,11 +42,9 @@ const AiExcelManager = () => {
     setFileName(file.name);
     const reader = new FileReader();
     reader.onload = (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, { type: 'binary' }).Sheets[XLSX.read(evt.target.result, { type: 'binary' }).SheetNames[0]]);
       setExcelData(data);
-      setMessages(prev => [...prev, { role: 'ai', text: `System Synced: ${data.length} records loaded into the grid.` }]);
+      setMessages(prev => [...prev, { role: 'ai', text: `Matrix Ingested: ${data.length} records loaded.` }]);
     };
     reader.readAsBinaryString(file);
   };
@@ -55,132 +61,120 @@ const AiExcelManager = () => {
         messages: [
           {
             role: "system",
-            content: "You are a Data Engine. Return ONLY a JSON array. Maintain consistency. If user asks for a new file, use headers: Date, Customer Name, Bill No, Credit, Debit, Balance. ALWAYS maintain the running Balance."
+            content: `You are a Data & UI Architect.
+            You must return a JSON with TWO parts: 
+            1. "data": The updated JSON array.
+            2. "style": An object containing (primaryColor, bgColor, textColor, fontSize, rowPadding).
+            
+            Format: { "data": [...], "style": {...} }
+            
+            Maintain the ledger logic. If the user asks for design/color changes, update the "style" object. Use HEX codes for colors.`
           },
           {
             role: "user",
-            content: `Current Matrix State: ${JSON.stringify(excelData)}\nInstruction: ${userQuery}`
+            content: `Current Style: ${JSON.stringify(gridStyle)}\nCurrent Data: ${JSON.stringify(excelData)}\nCommand: ${userQuery}`
           }
         ],
         model: "llama-3.3-70b-versatile",
         temperature: 0,
       });
 
-      const responseText = chatCompletion.choices[0]?.message?.content || "";
-      const updatedJson = JSON.parse(responseText.substring(responseText.indexOf('['), responseText.lastIndexOf(']') + 1));
+      const response = JSON.parse(chatCompletion.choices[0]?.message?.content || "{}");
       
-      // Visual feedback: Flash the table
-      setIsUpdating(true);
-      setExcelData(updatedJson);
-      setTimeout(() => setIsUpdating(false), 1000);
+      if (response.data) setExcelData(response.data);
+      if (response.style) setGridStyle(prev => ({ ...prev, ...response.style }));
       
-      setMessages(prev => [...prev, { role: 'ai', text: "Operation successful. Grid updated." }]);
+      setMessages(prev => [...prev, { role: 'ai', text: "Matrix and UI synchronized." }]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', text: "Logic Error: Connection to neural core lost." }]);
+      setMessages(prev => [...prev, { role: 'ai', text: "Processing failed. Check command." }]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const downloadExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, fileName.startsWith("AI_") ? fileName : `AI_MODIFIED_${fileName}`);
-  };
-
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-[#020403] p-4 gap-4 overflow-hidden font-sans">
+    <div className="flex flex-col lg:flex-row h-screen p-4 gap-4 overflow-hidden font-sans transition-all duration-700" style={{ backgroundColor: '#020403' }}>
       
-      {/* AI COMMAND PANEL */}
-      <div className="w-full lg:w-1/4 flex flex-col bg-[#080f0c] rounded-[2.5rem] border border-emerald-500/10 shadow-2xl overflow-hidden">
-        <div className="p-6 border-b border-emerald-500/10 bg-black/40 flex items-center gap-3">
-          <div className="p-2 bg-emerald-500/10 rounded-lg">
-            <BrainCircuit className="text-emerald-400 animate-pulse" size={20} />
+      {/* COMMAND CENTER */}
+      <div className="w-full lg:w-1/4 flex flex-col rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden" style={{ backgroundColor: gridStyle.bgColor }}>
+        <div className="p-6 border-b border-white/5 bg-black/20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BrainCircuit style={{ color: gridStyle.primaryColor }} size={20} className="animate-pulse" />
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: gridStyle.primaryColor }}>Command Core</h2>
           </div>
-          <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-400">Command Core</h2>
+          <Palette size={14} style={{ color: gridStyle.primaryColor }} />
         </div>
         
         <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`p-4 rounded-2xl text-[12px] leading-relaxed max-w-[90%] shadow-lg ${msg.role === 'user' ? 'bg-emerald-600 text-white rounded-tr-none' : 'bg-[#0d1612] border border-emerald-900/50 text-emerald-100 rounded-tl-none'}`}>
+              <div className={`p-4 rounded-2xl text-[12px] leading-relaxed max-w-[90%] shadow-lg ${msg.role === 'user' ? 'bg-zinc-800 text-white' : 'bg-black/40 border border-white/5 text-zinc-300'}`}>
                 {msg.text}
               </div>
             </div>
           ))}
-          {isTyping && <Loader2 className="text-emerald-500 animate-spin ml-2" size={16} />}
           <div ref={chatEndRef} />
         </div>
 
-        <div className="p-6 bg-black/40 border-t border-emerald-500/10">
-          <div className="flex gap-2 bg-[#020403] p-2 rounded-2xl border border-emerald-900/40 focus-within:border-emerald-500/50 transition-all">
+        <div className="p-6 bg-black/20 border-t border-white/5">
+          <div className="flex gap-2 bg-black/40 p-2 rounded-2xl border border-white/10">
             <input 
-              className="flex-1 bg-transparent border-none outline-none px-4 text-xs text-emerald-50 placeholder-emerald-900"
-              placeholder="Inject instruction..."
+              className="flex-1 bg-transparent border-none outline-none px-4 text-xs text-white placeholder-zinc-700"
+              placeholder="Design or Data command..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             />
-            <button onClick={handleSend} className="bg-emerald-500 p-3 rounded-xl hover:bg-white active:scale-95 transition-all">
-              <Send size={16} className="text-black" />
+            <button onClick={handleSend} className="p-3 rounded-xl transition-all active:scale-95 shadow-lg" style={{ backgroundColor: gridStyle.primaryColor }}>
+              <Send size={16} color="#000" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* LIVE GRID INTERFACE */}
-      <div className="w-full lg:w-3/4 flex flex-col bg-[#080f0c] rounded-[2.5rem] border border-emerald-500/10 shadow-2xl overflow-hidden">
-        <div className="p-6 border-b border-emerald-500/10 flex justify-between items-center bg-black/40 backdrop-blur-sm">
+      {/* DYNAMIC GRID INTERFACE */}
+      <div className="w-full lg:w-3/4 flex flex-col rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden transition-all duration-700" style={{ backgroundColor: gridStyle.bgColor }}>
+        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-emerald-500/10 rounded-lg">
-              <TableIcon className="text-emerald-400" size={20} />
-            </div>
+            <TableIcon style={{ color: gridStyle.primaryColor }} size={20} />
             <div>
-              <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-400">Matrix Ledger Grid</h2>
-              <p className="text-[9px] text-emerald-700 font-bold uppercase">{fileName}</p>
+              <h2 className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: gridStyle.primaryColor }}>Dynamic Grid</h2>
+              <p className="text-[9px] font-bold opacity-40 uppercase" style={{ color: gridStyle.textColor }}>{fileName}</p>
             </div>
           </div>
           <div className="flex gap-3">
-            <label className="group flex items-center gap-2 cursor-pointer bg-emerald-950/20 hover:bg-emerald-500 hover:text-black px-4 py-2 rounded-xl transition-all border border-emerald-500/20 shadow-inner">
-              <FileUp size={16} />
-              <span className="text-[10px] font-black uppercase tracking-tighter">Upload</span>
+            <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-xl transition-all border border-white/5 bg-black/20 hover:bg-black/40">
+              <FileUp size={16} style={{ color: gridStyle.primaryColor }} />
               <input type="file" className="hidden" onChange={handleFileUpload} />
             </label>
-            <button 
-              onClick={downloadExcel} 
-              disabled={excelData.length === 0}
-              className="flex items-center gap-2 bg-emerald-500 text-black px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-tighter hover:bg-white disabled:opacity-20 active:scale-95 transition-all shadow-lg"
-            >
-              <Download size={16} /> Export
+            <button onClick={() => XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(excelData), "Sheet1"), fileName)} className="px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg transition-all" style={{ backgroundColor: gridStyle.primaryColor, color: '#000' }}>
+              Download
             </button>
           </div>
         </div>
 
-        {/* DATA GRID AREA */}
-        <div className={`flex-1 overflow-auto p-2 transition-all duration-500 ${isUpdating ? 'bg-emerald-500/10 opacity-50' : ''}`}>
+        <div className="flex-1 overflow-auto p-4">
           {excelData.length > 0 ? (
-            <div className="relative overflow-x-auto rounded-xl border border-emerald-500/5">
-              <table className="w-full border-collapse text-[12px] text-emerald-100">
+            <div className="relative overflow-x-auto rounded-2xl border border-white/5">
+              <table className="w-full border-collapse" style={{ fontSize: gridStyle.fontSize, color: gridStyle.textColor }}>
                 <thead className="sticky top-0 z-10">
-                  <tr className="bg-[#020403] text-emerald-400 uppercase tracking-widest text-[10px]">
-                    <th className="p-4 border-b border-emerald-500/10 text-left bg-[#020403] w-12 text-center">#</th>
+                  <tr className="bg-black/60 uppercase tracking-widest text-[9px] font-black" style={{ color: gridStyle.primaryColor }}>
                     {Object.keys(excelData[0]).map(key => (
-                      <th key={key} className="p-4 border-b border-emerald-500/10 text-left font-black bg-[#020403]">{key}</th>
+                      <th key={key} className="p-4 border-b border-white/5 text-left">{key}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-emerald-500/5">
+                <tbody className="divide-y divide-white/5">
                   {excelData.map((row, rowIndex) => (
-                    <tr key={rowIndex} className="group hover:bg-emerald-500/5 transition-all">
-                      <td className="p-2 text-center text-emerald-800 font-mono text-[10px]">{rowIndex + 1}</td>
+                    <tr key={rowIndex} className="hover:bg-white/5 transition-all">
                       {Object.keys(row).map(key => (
-                        <td key={key} className="p-1 min-w-[120px]">
+                        <td key={key} className="p-0 border-white/5">
                           <input 
                             type="text" 
                             value={row[key] || ""} 
                             onChange={(e) => handleCellEdit(rowIndex, key, e.target.value)}
-                            className="bg-transparent w-full border border-transparent focus:border-emerald-500/30 focus:bg-black/40 outline-none p-3 rounded-lg transition-all text-[12px] text-emerald-50 group-hover:text-white"
+                            style={{ padding: gridStyle.rowPadding, color: gridStyle.textColor }}
+                            className="bg-transparent w-full border-none outline-none focus:bg-white/5 transition-all"
                           />
                         </td>
                       ))}
@@ -190,11 +184,9 @@ const AiExcelManager = () => {
               </table>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center space-y-4">
-              <div className="p-8 rounded-full bg-emerald-500/5 border border-emerald-500/10 animate-pulse">
-                <Database size={40} className="text-emerald-900" />
-              </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-emerald-900">Waiting for Matrix Injection</p>
+            <div className="h-full flex flex-col items-center justify-center opacity-20">
+              <Database size={50} style={{ color: gridStyle.primaryColor }} />
+              <p className="mt-4 text-[10px] font-black uppercase tracking-[0.4em]">Empty Grid</p>
             </div>
           )}
         </div>
