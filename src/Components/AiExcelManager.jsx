@@ -6,7 +6,7 @@ import Groq from "groq-sdk";
 const groq = new Groq({ apiKey: import.meta.env.VITE_GROQ_API_KEY, dangerouslyAllowBrowser: true });
 
 const AiExcelManager = () => {
-  const [messages, setMessages] = useState([{ role: 'ai', text: "Beer AI v6.0 Live! Bhai ab image compressor laga diya hai, ab Scan fail nahi hoga. Try karo!" }]);
+  const [messages, setMessages] = useState([{ role: 'ai', text: "Beer AI v6.5: Bhai ab detail 'low' kardi hai aur header saaf kar diya hai. Ab API reject nahi karegi!" }]);
   const [excelData, setExcelData] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -24,25 +24,24 @@ const AiExcelManager = () => {
     });
   }, [excelData]);
 
-  // 🛠️ IMAGE COMPRESSOR (400 Error ka ilaj)
-  const compressImage = (base64Str) => {
+  // ✨ Stronger Compressor
+  const compressImage = (file) => {
     return new Promise((resolve) => {
-      const img = new Image();
-      img.src = base64Str;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800; // Resolution thori kam ki taake API handle kar sakay
-        let width = img.width;
-        let height = img.height;
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.7)); // 70% quality compression
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const width = 600; // Aur chota kar diya stable scan ke liye
+          const scaleFactor = width / img.width;
+          canvas.width = width;
+          canvas.height = img.height * scaleFactor;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.6)); // 60% quality
+        };
       };
     });
   };
@@ -51,34 +50,38 @@ const AiExcelManager = () => {
     const file = e.target.files[0];
     if (!file) return;
     setIsTyping(true);
-    setMessages(prev => [...prev, { role: 'ai', text: "Bhai, photo ko optimize kar raha hoon..." }]);
+    setMessages(prev => [...prev, { role: 'ai', text: "Bhai, image process kar raha hoon..." }]);
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        const optimizedImage = await compressImage(reader.result);
-        const response = await groq.chat.completions.create({
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: "Convert this ledger/handwritten account to JSON array: [{Date, 'Customer Name', Description, Debit, Credit}]. No extra talk, just JSON." },
-              { type: "image_url", image_url: { url: optimizedImage } }
-            ]
-          }],
-          model: "llama-3.2-11b-vision-preview",
-        });
+    try {
+      const optimizedImage = await compressImage(file);
+      
+      const response = await groq.chat.completions.create({
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: "Extract ledger data to JSON: [{Date, 'Customer Name', Description, Debit, Credit}]. Output JSON only." },
+            { 
+              type: "image_url", 
+              image_url: { 
+                url: optimizedImage,
+                detail: "low" // 🚀 Key fix: forces lower token usage
+              } 
+            }
+          ]
+        }],
+        model: "llama-3.2-11b-vision-preview",
+      });
 
-        const res = response.choices[0].message.content;
-        const jsonMatch = res.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          setExcelData(prev => [...prev, ...JSON.parse(jsonMatch[0])]);
-          setMessages(prev => [...prev, { role: 'ai', text: "Zabardast! Optimized photo se data aa gaya." }]);
-        }
-      } catch (err) {
-        setMessages(prev => [...prev, { role: 'ai', text: "Abhi bhi API ka masla hai, shayad net ya limit ka issue ho." }]);
-      } finally { setIsTyping(false); }
-    };
-    reader.readAsDataURL(file);
+      const res = response.choices[0].message.content;
+      const jsonMatch = res.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        setExcelData(prev => [...prev, ...JSON.parse(jsonMatch[0])]);
+        setMessages(prev => [...prev, { role: 'ai', text: "Zabardast! Data matrix mein agaya." }]);
+      }
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [...prev, { role: 'ai', text: "Yaar, API abhi bhi nakhre kar rahi hai. Ek baar refresh karo." }]);
+    } finally { setIsTyping(false); }
   };
 
   const handleSend = async () => {
@@ -91,11 +94,10 @@ const AiExcelManager = () => {
     try {
       const chatCompletion = await groq.chat.completions.create({
         messages: [
-          { role: "system", content: "You are 'Beer AI'. Return [MESSAGE]: and [DATA]: JSON array." },
-          { role: "user", content: `Data: ${JSON.stringify(excelData)}\nCommand: ${userQuery}` }
+          { role: "system", content: "You are 'Beer AI'. Keep it professional. Return [MESSAGE]: and [DATA]: JSON." },
+          { role: "user", content: `Data: ${JSON.stringify(excelData)}\nQuery: ${userQuery}` }
         ],
         model: "llama-3.3-70b-versatile",
-        temperature: 0.1,
       });
       const raw = chatCompletion.choices[0]?.message?.content || "";
       const dataMatch = raw.match(/\[DATA\]:(\s*\[[\s\S]*\])/);
@@ -104,7 +106,7 @@ const AiExcelManager = () => {
         setExcelData(JSON.parse(dataMatch[1].trim()));
         setMessages(prev => [...prev, { role: 'ai', text: msgMatch ? msgMatch[1].trim() : "Done!" }]);
       }
-    } catch (err) { setMessages(prev => [...prev, { role: 'ai', text: "Error logic mein!" }]); }
+    } catch (err) { setMessages(prev => [...prev, { role: 'ai', text: "Error!" }]); }
     finally { setIsTyping(false); }
   };
 
@@ -115,7 +117,7 @@ const AiExcelManager = () => {
           <BrainCircuit className="text-emerald-400" size={20} />
           <span className="text-xs font-black uppercase tracking-widest text-emerald-400">Beer AI Core</span>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`p-4 rounded-2xl max-w-[90%] text-xs ${msg.role === 'user' ? 'bg-emerald-600' : 'bg-[#141a18] border border-emerald-500/5'}`}>
@@ -127,12 +129,12 @@ const AiExcelManager = () => {
           <div ref={chatEndRef} />
         </div>
         <div className="p-4 bg-black/20 space-y-2">
-          <div className="flex gap-2 bg-[#020403] p-1.5 rounded-xl border border-emerald-500/20 focus-within:border-emerald-500 transition-all">
+          <div className="flex gap-2 bg-[#020403] p-1.5 rounded-xl border border-emerald-500/20 focus-within:border-emerald-500">
             <input className="flex-1 bg-transparent border-none outline-none px-3 text-xs" placeholder="Command..." value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} />
             <button onClick={handleSend} className="bg-emerald-500 p-2.5 rounded-lg text-black"><Send size={14} /></button>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/20 p-2 rounded-xl text-[10px] text-emerald-400 font-bold uppercase hover:bg-emerald-500/5 transition-all">
+            <label className="flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/20 p-2 rounded-xl text-[10px] text-emerald-400 font-bold uppercase hover:bg-emerald-500/5">
               <FileUp size={14} /> Excel <input type="file" className="hidden" onChange={(e) => {
                 const file = e.target.files[0];
                 const reader = new FileReader();
@@ -143,7 +145,7 @@ const AiExcelManager = () => {
                 reader.readAsBinaryString(file);
               }} />
             </label>
-            <label className="flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/20 p-2 rounded-xl text-[10px] text-emerald-400 font-bold uppercase hover:bg-emerald-500/5 transition-all">
+            <label className="flex items-center justify-center gap-2 cursor-pointer border border-emerald-500/20 p-2 rounded-xl text-[10px] text-emerald-400 font-bold uppercase hover:bg-emerald-500/5">
               <Camera size={14} /> Scan <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
             </label>
           </div>
@@ -152,9 +154,9 @@ const AiExcelManager = () => {
 
       <div className="flex-1 flex flex-col bg-[#0b0f0e] rounded-[2.5rem] border border-emerald-500/10 shadow-2xl overflow-hidden">
         <div className="p-6 border-b border-emerald-500/5 flex justify-between items-center bg-emerald-500/[0.02]">
-          <div className="flex items-center gap-4">
-            <TrendingUp className="text-emerald-500" size={24} />
-            <h2 className="text-sm font-black uppercase tracking-widest">Financial Ledger</h2>
+          <div className="flex items-center gap-4 text-emerald-500">
+            <TrendingUp size={24} />
+            <h2 className="text-sm font-black uppercase tracking-widest text-zinc-200">Financial Ledger</h2>
           </div>
           <button onClick={() => {
             const ws = XLSX.utils.json_to_sheet(processedData);
@@ -166,9 +168,9 @@ const AiExcelManager = () => {
         <div className="flex-1 overflow-auto p-6">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-[#121816] text-emerald-400 text-[10px] font-black uppercase border-b border-emerald-500/10">
-                <th className="p-4 text-left">Date</th>
-                <th className="p-4 text-left">Customer</th>
+              <tr className="bg-[#121816] text-emerald-400 text-[10px] font-black uppercase border-b border-emerald-500/10 text-left">
+                <th className="p-4">Date</th>
+                <th className="p-4">Customer</th>
                 <th className="p-4 text-right">Debit</th>
                 <th className="p-4 text-right">Credit</th>
                 <th className="p-4 text-right">Balance</th>
@@ -179,9 +181,9 @@ const AiExcelManager = () => {
                 <tr key={i} className="hover:bg-emerald-500/[0.02] text-[11px] border-b border-emerald-500/5">
                   <td className="p-4 opacity-50">{row.Date || '-'}</td>
                   <td className="p-4 font-bold text-white uppercase">{row["Customer Name"] || '-'}</td>
-                  <td className="p-4 text-right text-red-400 font-mono">-{row.Debit || 0}</td>
-                  <td className="p-4 text-right text-emerald-400 font-mono">+{row.Credit || 0}</td>
-                  <td className="p-4 text-right font-black text-white bg-emerald-500/[0.02]">{row.Balance.toLocaleString()}</td>
+                  <td className="p-4 text-right text-red-400">-{row.Debit || 0}</td>
+                  <td className="p-4 text-right text-emerald-400">+{row.Credit || 0}</td>
+                  <td className="p-4 text-right font-black text-white">{row.Balance.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>
