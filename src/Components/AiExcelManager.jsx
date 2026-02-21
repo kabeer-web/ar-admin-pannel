@@ -1,136 +1,170 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { Send, Download, BrainCircuit, Loader2, FileUp, Bot, User } from 'lucide-react';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Send, Download, BrainCircuit, FileUp, Database, Table as TableIcon } from 'lucide-react';
+import Groq from "groq-sdk";
 
-// Nayi API Key jo tune di
-const genAI = new GoogleGenerativeAI("AIzaSyCFsfQ24mlRXqHq0u6HkmYrAaW_-s2gPTI");
+const groq = new Groq({ 
+  apiKey: import.meta.env.VITE_GROQ_API_KEY, 
+  dangerouslyAllowBrowser: true 
+});
 
 const AiExcelManager = () => {
   const [messages, setMessages] = useState([
-    { role: 'ai', text: "Neural Core Online. Kabir, inject the matrix (Excel) to begin data manipulation." }
+    { role: 'ai', text: "Neural Grid Active. Upload a file or tell me to create one. You can edit the cells directly too!" }
   ]);
-  const [excelData, setExcelData] = useState(null);
+  const [excelData, setExcelData] = useState([]);
   const [fileName, setFileName] = useState("");
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
 
-  const scrollToBottom = () => chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  useEffect(() => scrollToBottom(), [messages]);
+  useEffect(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
+
+  // Manual Edit Function
+  const handleCellEdit = (rowIndex, columnKey, value) => {
+    const newData = [...excelData];
+    newData[rowIndex][columnKey] = value;
+    setExcelData(newData);
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setFileName(file.name);
-    
     const reader = new FileReader();
     reader.onload = (evt) => {
-      try {
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        setExcelData(data);
-        setMessages(prev => [...prev, 
-          { role: 'user', text: `Uploaded: ${file.name}` },
-          { role: 'ai', text: `Matrix Ingested. ${data.length} records detected. Standing by.` }
-        ]);
-      } catch (err) {
-        setMessages(prev => [...prev, { role: 'ai', text: "Format Error." }]);
-      }
+      const bstr = evt.target.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      setExcelData(data);
+      setMessages(prev => [...prev, { role: 'ai', text: `Matrix Ingested. ${data.length} rows loaded into the grid.` }]);
     };
     reader.readAsBinaryString(file);
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !excelData) return;
-
+    if (!input.trim()) return;
     const userQuery = input;
     setInput("");
     setMessages(prev => [...prev, { role: 'user', text: userQuery }]);
     setIsTyping(true);
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      
-      // Chota aur seedha prompt taake AI confuse na ho
-      const prompt = `Return ONLY a JSON array. Task: ${userQuery}. Data: ${JSON.stringify(excelData)}`;
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: "You are a Data Engine. Return ONLY a JSON array. Maintain headers: Date, Customer Name, Bill No, Credit, Debit, Balance. Always append/edit, never wipe data."
+          },
+          {
+            role: "user",
+            content: `Current Data: ${JSON.stringify(excelData)}\nCommand: ${userQuery}`
+          }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0,
+      });
 
-      // Timeout control logic
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const responseText = response.text().trim();
-      
-      const startIdx = responseText.indexOf('[');
-      const endIdx = responseText.lastIndexOf(']') + 1;
-      
-      if (startIdx === -1) throw new Error("JSON_MISSING");
-
-      const jsonString = responseText.substring(startIdx, endIdx);
-      const updatedJson = JSON.parse(jsonString);
-      
+      const responseText = chatCompletion.choices[0]?.message?.content || "";
+      const updatedJson = JSON.parse(responseText.substring(responseText.indexOf('['), responseText.lastIndexOf(']') + 1));
       setExcelData(updatedJson);
-      setMessages(prev => [...prev, { role: 'ai', text: "Matrix Updated. Balance Sync Complete." }]);
-      
+      setMessages(prev => [...prev, { role: 'ai', text: "Grid synchronized with AI logic." }]);
     } catch (err) {
-      console.error(err);
-      // Agar Gemini fail ho toh hum user ko bata denge ke manual retry karein
-      setMessages(prev => [...prev, { role: 'ai', text: "Neural Link Busy. Try hitting 'Execute' again—the gateway is congested." }]);
+      setMessages(prev => [...prev, { role: 'ai', text: "Error syncing matrix." }]);
     } finally {
       setIsTyping(false);
     }
   };
 
-  const downloadExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, `Modified_${fileName}`);
-  };
-
   return (
-    <div className="flex flex-col h-[90vh] bg-[#010604] text-emerald-50 rounded-3xl border border-emerald-500/10 overflow-hidden m-4 shadow-2xl">
-      <div className="p-6 border-b border-emerald-500/10 flex justify-between items-center bg-[#020806]">
-        <div className="flex items-center gap-3">
-          <BrainCircuit className="text-emerald-500" size={24} />
-          <h2 className="font-black text-xs uppercase tracking-widest italic">Neural Engine v4.0</h2>
+    <div className="flex flex-col lg:flex-row h-screen bg-[#010302] p-4 gap-4 overflow-hidden">
+      
+      {/* Left Side: AI Chat (30%) */}
+      <div className="w-full lg:w-1/3 flex flex-col bg-[#050a08] rounded-[2rem] border border-emerald-500/20 shadow-2xl overflow-hidden">
+        <div className="p-5 border-b border-emerald-500/10 flex items-center gap-3 bg-black/40">
+          <BrainCircuit className="text-emerald-400" size={20} />
+          <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">AI Command Center</h2>
         </div>
-        {excelData && (
-          <button onClick={downloadExcel} className="bg-emerald-500 text-black px-4 py-2 rounded-full font-bold text-[10px]">
-            DOWNLOAD
-          </button>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`p-4 rounded-2xl text-xs max-w-[80%] ${msg.role === 'user' ? 'bg-emerald-600' : 'bg-[#0a1a15] border border-emerald-500/10'}`}>
-              {msg.text}
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`p-4 rounded-2xl text-[12px] max-w-[90%] ${msg.role === 'user' ? 'bg-emerald-600 text-white' : 'bg-emerald-950/30 border border-emerald-900/50 text-emerald-100'}`}>
+                {msg.text}
+              </div>
             </div>
+          ))}
+          <div ref={chatEndRef} />
+        </div>
+
+        <div className="p-6 bg-black/20 border-t border-emerald-500/10">
+          <div className="flex gap-2 bg-black/40 p-2 rounded-2xl border border-emerald-900/30">
+            <input 
+              className="flex-1 bg-transparent border-none outline-none px-4 text-xs text-emerald-50"
+              placeholder="Command the AI..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            />
+            <button onClick={handleSend} className="bg-emerald-500 p-3 rounded-xl hover:bg-white transition-all">
+              <Send size={16} className="text-black" />
+            </button>
           </div>
-        ))}
-        {isTyping && <div className="text-emerald-500 text-[10px] animate-pulse">PROCESSING...</div>}
-        <div ref={chatEndRef} />
+        </div>
       </div>
 
-      <div className="p-6 bg-[#020806] border-t border-emerald-500/10">
-        {!excelData && (
-          <label className="block text-center p-4 border border-dashed border-emerald-500/30 rounded-xl mb-4 cursor-pointer hover:bg-emerald-500/5">
-            <span className="text-[10px] font-bold uppercase tracking-widest">Upload Excel</span>
-            <input type="file" className="hidden" onChange={handleFileUpload} />
-          </label>
-        )}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Type command..."
-            className="flex-1 bg-black/50 border border-emerald-500/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500/50"
-          />
-          <button onClick={handleSend} className="bg-emerald-500 text-black px-6 rounded-xl font-bold text-xs uppercase">Run</button>
+      {/* Right Side: Excel GUI (70%) */}
+      <div className="w-full lg:w-2/3 flex flex-col bg-[#050a08] rounded-[2rem] border border-emerald-500/20 shadow-2xl overflow-hidden">
+        <div className="p-5 border-b border-emerald-500/10 flex justify-between items-center bg-black/40">
+          <div className="flex items-center gap-3">
+            <TableIcon className="text-emerald-400" size={20} />
+            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-400">Live Ledger Matrix</h2>
+          </div>
+          <div className="flex gap-3">
+            <label className="cursor-pointer bg-emerald-900/20 hover:bg-emerald-900/40 p-2 rounded-lg transition-all border border-emerald-500/20">
+              <FileUp size={18} className="text-emerald-400" />
+              <input type="file" className="hidden" onChange={handleFileUpload} />
+            </label>
+            <button onClick={() => XLSX.writeFile(XLSX.utils.book_append_sheet(XLSX.utils.book_new(), XLSX.utils.json_to_sheet(excelData), "Sheet1"), "ledger.xlsx")} className="bg-emerald-500 p-2 rounded-lg hover:bg-white transition-all">
+              <Download size={18} className="text-black" />
+            </button>
+          </div>
+        </div>
+
+        {/* The Grid */}
+        <div className="flex-1 overflow-auto p-4 scrollbar-thin scrollbar-thumb-emerald-900">
+          {excelData.length > 0 ? (
+            <table className="w-full border-collapse text-[12px] text-emerald-100">
+              <thead>
+                <tr className="bg-emerald-900/20 text-emerald-400 uppercase tracking-widest text-[10px]">
+                  {Object.keys(excelData[0]).map(key => (
+                    <th key={key} className="p-4 border border-emerald-500/10 text-left font-black">{key}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {excelData.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="hover:bg-emerald-500/5 border-b border-emerald-500/5 transition-all">
+                    {Object.keys(row).map(key => (
+                      <td key={key} className="p-2 border border-emerald-500/5">
+                        <input 
+                          type="text" 
+                          value={row[key] || ""} 
+                          onChange={(e) => handleCellEdit(rowIndex, key, e.target.value)}
+                          className="bg-transparent w-full border-none outline-none focus:bg-emerald-500/10 p-2 rounded transition-all"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-emerald-900">
+              <Database size={60} className="mb-4 opacity-20" />
+              <p className="text-[10px] font-black uppercase tracking-[0.4em]">Grid Empty: Ingest Data</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
